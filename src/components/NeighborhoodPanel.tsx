@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyData } from "@/types";
 import { mockDataService } from "@/services/mockDataService";
-import { Progress } from "@/components/ui/progress";
+import { ProgressWithIndicator } from "@/components/ui/progress-with-indicator";
 import { cn } from "@/lib/utils";
 
 interface NeighborhoodPanelProps {
@@ -68,13 +67,10 @@ const NeighborhoodPanel = ({ property }: NeighborhoodPanelProps) => {
               {neighborhoodData.schoolRating}/10
             </p>
           </div>
-          <Progress 
+          <ProgressWithIndicator 
             value={neighborhoodData.schoolRating * 10} 
-            className="h-2"
-            indicatorClassName={cn(
-              neighborhoodData.schoolRating >= 7 ? "bg-green-600" : 
-              neighborhoodData.schoolRating >= 5 ? "bg-amber-600" : "bg-red-600"
-            )}
+            className="h-2 w-full" 
+            indicatorClassName={getSchoolRatingColorClass(neighborhoodData.schoolRating)}
           />
           <p className="text-xs mt-1 text-muted-foreground">
             {neighborhoodData.schoolRating >= 7 
@@ -97,13 +93,10 @@ const NeighborhoodPanel = ({ property }: NeighborhoodPanelProps) => {
               {neighborhoodData.walkabilityScore}/100
             </p>
           </div>
-          <Progress 
+          <ProgressWithIndicator 
             value={neighborhoodData.walkabilityScore} 
-            className="h-2"
-            indicatorClassName={cn(
-              neighborhoodData.walkabilityScore >= 70 ? "bg-green-600" : 
-              neighborhoodData.walkabilityScore >= 40 ? "bg-amber-600" : "bg-red-600"
-            )}
+            className="h-2 w-full" 
+            indicatorClassName={getWalkabilityColorClass(neighborhoodData.walkabilityScore)}
           />
           <p className="text-xs mt-1 text-muted-foreground">
             {neighborhoodData.walkabilityScore >= 70 
@@ -126,13 +119,10 @@ const NeighborhoodPanel = ({ property }: NeighborhoodPanelProps) => {
               {neighborhoodData.transitScore}/100
             </p>
           </div>
-          <Progress 
+          <ProgressWithIndicator 
             value={neighborhoodData.transitScore} 
-            className="h-2"
-            indicatorClassName={cn(
-              neighborhoodData.transitScore >= 70 ? "bg-green-600" : 
-              neighborhoodData.transitScore >= 40 ? "bg-amber-600" : "bg-red-600"
-            )}
+            className="h-2 w-full" 
+            indicatorClassName={getTransitColorClass(neighborhoodData.transitScore)}
           />
           <p className="text-xs mt-1 text-muted-foreground">
             {neighborhoodData.transitScore >= 70 
@@ -164,6 +154,24 @@ const NeighborhoodPanel = ({ property }: NeighborhoodPanelProps) => {
       </CardContent>
     </Card>
   );
+};
+
+const getSchoolRatingColorClass = (schoolRating: number) => {
+  if (schoolRating >= 7) return "bg-green-600";
+  if (schoolRating >= 5) return "bg-amber-600";
+  return "bg-red-600";
+};
+
+const getWalkabilityColorClass = (walkabilityScore: number) => {
+  if (walkabilityScore >= 70) return "bg-green-600";
+  if (walkabilityScore >= 40) return "bg-amber-600";
+  return "bg-red-600";
+};
+
+const getTransitColorClass = (transitScore: number) => {
+  if (transitScore >= 70) return "bg-green-600";
+  if (transitScore >= 40) return "bg-amber-600";
+  return "bg-red-600";
 };
 
 export default NeighborhoodPanel;

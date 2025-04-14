@@ -3,7 +3,7 @@ import { ChatMessage as ChatMessageType } from "@/types";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Bot, User } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { ReactMarkdown } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
