@@ -38,6 +38,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         ) : (
           <Markdown 
             className="prose-sm max-w-none break-words"
+            // @ts-ignore - Ignoring type compatibility issues between remark-gfm and react-markdown
             remarkPlugins={[remarkGfm]}
             components={{
               table: (props) => (
