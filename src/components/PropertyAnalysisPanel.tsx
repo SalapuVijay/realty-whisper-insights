@@ -3,7 +3,7 @@ import { PropertyAnalysis, PropertyData } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { generatePDF } from "@/utils/pdfGenerator";
+import { generatePDF } from "@/utils/pdf";
 import { mockDataService } from "@/services/mockDataService";
 import { cn } from "@/lib/utils";
 
@@ -29,14 +29,18 @@ const PropertyAnalysisPanel = ({ property, analysis }: PropertyAnalysisPanelProp
     );
   }
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!property || !analysis) return;
     
     const marketTrend = mockDataService.getMarketTrends(property.city, property.state);
     const neighborhood = mockDataService.getNeighborhoodData(property.zipCode, property.city, property.state);
     
-    const doc = generatePDF(property, analysis, marketTrend, neighborhood);
-    doc.save(`RealtyWhisper_Analysis_${property.address.replace(/\s/g, "_")}.pdf`);
+    try {
+      const doc = await generatePDF(property, analysis, marketTrend, neighborhood);
+      doc.save(`RealtyWhisper_Analysis_${property.address.replace(/\s/g, "_")}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
   };
 
   const metrics = [

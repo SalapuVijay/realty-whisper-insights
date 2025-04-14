@@ -3,7 +3,7 @@ import { ChatMessage as ChatMessageType } from "@/types";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Bot, User } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
@@ -36,9 +36,8 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         {message.isTyping ? (
           <div className="typing-animation font-medium">Thinking</div>
         ) : (
-          <ReactMarkdown 
+          <Markdown 
             className="prose-sm max-w-none break-words"
-            // Use remarkPlugins as array of functions without additional options
             remarkPlugins={[remarkGfm]}
             components={{
               table: (props) => (
@@ -63,7 +62,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             }}
           >
             {message.content}
-          </ReactMarkdown>
+          </Markdown>
         )}
       </Card>
       

@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { PropertyData, PropertyAnalysis, MarketTrend, NeighborhoodData } from "@/types";
 
 // Create a function to generate a PDF for a property analysis report
-export const generatePropertyReport = async (
+export const generatePropertyReport = (
   property: PropertyData,
   analysis: PropertyAnalysis,
   marketTrend?: MarketTrend,
