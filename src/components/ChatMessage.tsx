@@ -2,7 +2,7 @@
 import { ChatMessage as ChatMessageType } from "@/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { Bot, User, Loader2 } from "lucide-react";
+import { Bot, User, Loader2, Clock } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -26,14 +26,18 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
       {!isUser && (
         <HoverCard>
           <HoverCardTrigger asChild>
-            <Avatar className="h-8 w-8 ring-2 ring-realty-700/20 bg-realty-700 text-white hover:scale-110 transition-transform cursor-pointer">
+            <Avatar className="h-9 w-9 ring-2 ring-realty-600/30 bg-gradient-to-br from-realty-600 to-realty-700 text-white hover:scale-110 transition-transform cursor-pointer shadow-md">
               <Bot className="h-5 w-5" />
             </Avatar>
           </HoverCardTrigger>
-          <HoverCardContent className="w-48">
-            <div className="flex flex-col space-y-1">
-              <h4 className="text-sm font-semibold">RealtyWhisper AI</h4>
-              <p className="text-xs text-muted-foreground">Your real estate analysis assistant</p>
+          <HoverCardContent className="w-52 p-4 glass-card">
+            <div className="flex flex-col space-y-2">
+              <h4 className="text-sm font-semibold text-realty-800">RealtyWhisper AI</h4>
+              <p className="text-xs text-muted-foreground">Your personal real estate analysis assistant</p>
+              <div className="flex items-center gap-1 mt-1 text-xs text-realty-600">
+                <Clock className="h-3 w-3" />
+                <span>Available 24/7</span>
+              </div>
             </div>
           </HoverCardContent>
         </HoverCard>
@@ -42,13 +46,15 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
       <Card
         className={cn(
           "px-4 py-3 max-w-[85%] sm:max-w-[75%] transition-all message-card relative",
-          isUser ? "bg-realty-700 text-white shadow-lg" : "bg-background border shadow-sm"
+          isUser 
+            ? "bg-gradient-to-r from-realty-600 to-realty-700 text-white shadow-lg rounded-2xl rounded-tr-none border-none" 
+            : "glass-card rounded-2xl rounded-tl-none"
         )}
       >
         {message.isTyping ? (
           <div className="typing-animation flex items-center space-x-2">
             <span className="font-medium">Thinking</span>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin text-realty-300" />
           </div>
         ) : (
           <div className="space-y-1">
@@ -57,7 +63,6 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                 "prose-sm max-w-none break-words",
                 !isUser && "prose-headings:text-realty-700 prose-a:text-realty-600"
               )}
-              // @ts-ignore - Ignoring type compatibility issues between remark-gfm and react-markdown
               remarkPlugins={[remarkGfm]}
               components={{
                 table: (props) => (
@@ -84,7 +89,8 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
               {message.content}
             </Markdown>
             
-            <div className="text-xs opacity-70 text-right pt-1">
+            <div className="text-xs opacity-70 text-right pt-1 flex items-center justify-end gap-1">
+              <Clock className="h-3 w-3" />
               {timestamp}
             </div>
           </div>
@@ -94,14 +100,16 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
       {isUser && (
         <HoverCard>
           <HoverCardTrigger asChild>
-            <Avatar className="h-8 w-8 ring-2 ring-realty-400/20 bg-realty-600 hover:bg-realty-700 text-white hover:scale-110 transition-transform cursor-pointer">
+            <Avatar className="h-9 w-9 ring-2 ring-realty-400/30 bg-gradient-to-br from-realty-500 to-realty-600 hover:bg-realty-700 text-white hover:scale-110 transition-transform cursor-pointer shadow-md">
               <User className="h-5 w-5" />
             </Avatar>
           </HoverCardTrigger>
-          <HoverCardContent className="w-48">
-            <div className="flex flex-col space-y-1">
-              <h4 className="text-sm font-semibold">You</h4>
+          <HoverCardContent className="w-52 p-4 glass-card">
+            <div className="flex flex-col space-y-2">
+              <h4 className="text-sm font-semibold text-realty-800">You</h4>
               <p className="text-xs text-muted-foreground">Property investor</p>
+              <div className="h-px w-full bg-gradient-to-r from-realty-200 to-transparent"></div>
+              <div className="text-xs text-realty-600 italic">Ask me about investment properties</div>
             </div>
           </HoverCardContent>
         </HoverCard>
