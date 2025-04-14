@@ -38,6 +38,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         ) : (
           <ReactMarkdown 
             className="prose-sm max-w-none break-words"
+            // Use remarkPlugins as array of functions without additional options
             remarkPlugins={[remarkGfm]}
             components={{
               table: (props) => (

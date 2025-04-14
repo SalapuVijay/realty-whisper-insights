@@ -1,9 +1,10 @@
+
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { PropertyData, PropertyAnalysis, MarketTrend, NeighborhoodData } from "@/types";
 
 // Create a function to generate a PDF for a property analysis report
-export const generatePropertyAnalysisReport = async (
+export const generatePropertyReport = async (
   property: PropertyData,
   analysis: PropertyAnalysis,
   marketTrend?: MarketTrend,
@@ -44,7 +45,7 @@ export const generatePropertyAnalysisReport = async (
     // Add property details as a table
     const propertyDetailsBody = propertyDetails.map(row => [row[0], row[1]]);
     
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [["Detail", "Value"]],
       body: propertyDetailsBody,
@@ -74,7 +75,7 @@ export const generatePropertyAnalysisReport = async (
     // Add financial analysis as a table
     const financialAnalysisBody = financialAnalysis.map(row => [row[0], row[1]]);
     
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [["Metric", "Value"]],
       body: financialAnalysisBody,
@@ -108,7 +109,7 @@ export const generatePropertyAnalysisReport = async (
       // Add market trends as a table
       const marketTrendsBody = marketTrends.map(row => [row[0], row[1]]);
       
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [["Trend", "Value"]],
         body: marketTrendsBody,
@@ -144,7 +145,7 @@ export const generatePropertyAnalysisReport = async (
       // Add neighborhood insights as a table
       const neighborhoodInsightsBody = neighborhoodInsights.map(row => [row[0], row[1]]);
       
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [["Insight", "Value"]],
         body: neighborhoodInsightsBody,
@@ -162,3 +163,6 @@ export const generatePropertyAnalysisReport = async (
     throw error;
   }
 };
+
+// Add the export that PropertyAnalysisPanel is looking for
+export const generatePDF = generatePropertyReport;
