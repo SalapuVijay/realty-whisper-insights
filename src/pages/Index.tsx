@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import ChatContainer from "@/components/ChatContainer";
 import PropertyAnalysisPanel from "@/components/PropertyAnalysisPanel";
@@ -7,10 +7,26 @@ import MarketTrendsPanel from "@/components/MarketTrendsPanel";
 import NeighborhoodPanel from "@/components/NeighborhoodPanel";
 import { PropertyData, PropertyAnalysis } from "@/types";
 import { Clock, TrendingUp, MapPin } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 
 const Index = () => {
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
+
+  // Check for API keys on component mount
+  useEffect(() => {
+    const mashvisorApiKey = localStorage.getItem("mashvisor_api_key");
+    const zillowApiKey = localStorage.getItem("zillow_api_key");
+    
+    if (!mashvisorApiKey || !zillowApiKey) {
+      setTimeout(() => {
+        toast("API Keys Not Set", {
+          description: "Click the key icon in the chat input to add your Mashvisor and Zillow API keys for real property data.",
+          duration: 5000,
+        });
+      }, 2000);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -1,6 +1,7 @@
-
 import { ChatMessage, NeighborhoodData, PropertyData, PropertyAnalysis } from "@/types";
 import { mockDataService } from "@/services/mockDataService";
+import * as mashvisorService from "@/services/mashvisorService";
+import * as zillowService from "@/services/zillowService";
 
 export type ChatContextType = {
   property: PropertyData | null;
@@ -32,7 +33,6 @@ const defaultPropertyData: PropertyData = {
   loanTerm: 30
 };
 
-// Process user message and generate a response
 export const processMessage = async (
   message: string,
   chatContext: ChatContextType,
@@ -40,14 +40,109 @@ export const processMessage = async (
 ): Promise<string> => {
   const lowerMessage = message.toLowerCase();
   let response = "";
+  
+  const mashvisorApiKey = localStorage.getItem("mashvisor_api_key");
+  const zillowApiKey = localStorage.getItem("zillow_api_key");
+  const hasRealApiKeys = mashvisorApiKey && zillowApiKey;
 
-  // Check for property info request
+  if (lowerMessage.includes("find property") || 
+      lowerMessage.includes("search for property") || 
+      lowerMessage.includes("find investment") ||
+      lowerMessage.includes("show properties")) {
+    
+    const cityMatch = message.match(/in\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const stateMatch = message.match(/([A-Z]{2})(?:\s+\d{5}|\s*$|,)/);
+    const zipMatch = message.match(/(\d{5})/);
+    
+    const city = cityMatch ? cityMatch[1].trim() : "Austin";
+    const state = stateMatch ? stateMatch[1].trim() : "TX";
+    const zipCode = zipMatch ? zipMatch[1].trim() : undefined;
+    
+    response = `Searching for properties in ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}...\n\n`;
+    
+    if (hasRealApiKeys) {
+      try {
+        const properties = await mashvisorService.searchProperties(city, state, zipCode);
+        
+        if (properties.length === 0) {
+          response += "I couldn't find any properties matching your criteria. Try a different location or broader search terms.";
+        } else {
+          response += `Found ${properties.length} properties:\n\n`;
+          
+          properties.forEach((property, index) => {
+            response += `**Property ${index + 1}**: ${property.address}, ${property.city}, ${property.state}\n`;
+            response += `• Purchase Price: $${property.purchasePrice.toLocaleString()}\n`;
+            response += `• Monthly Rent: $${property.monthlyRent.toLocaleString()}\n\n`;
+          });
+          
+          response += "To analyze any of these properties, say 'analyze property [number]' or 'analyze property at [address]'.";
+          
+          setChatContext({
+            ...chatContext,
+            comparisonProperties: properties
+          });
+        }
+      } catch (error) {
+        console.error("Error searching properties:", error);
+        response += "I encountered an error while searching for properties. Please check your API key or try again later.";
+      }
+    } else {
+      const mockProperties = [
+        { ...defaultPropertyData, id: "mock1", address: "123 Main St", city, state },
+        { ...defaultPropertyData, id: "mock2", address: "456 Oak Ave", city, state, purchasePrice: 425000, monthlyRent: 2800 },
+        { ...defaultPropertyData, id: "mock3", address: "789 Pine Blvd", city, state, purchasePrice: 275000, monthlyRent: 1900 }
+      ];
+      
+      response += "Here are some sample properties (using mock data):\n\n";
+      
+      mockProperties.forEach((property, index) => {
+        response += `**Property ${index + 1}**: ${property.address}, ${property.city}, ${property.state}\n`;
+        response += `• Purchase Price: $${property.purchasePrice.toLocaleString()}\n`;
+        response += `• Monthly Rent: $${property.monthlyRent.toLocaleString()}\n\n`;
+      });
+      
+      response += "To analyze any of these properties, say 'analyze property [number]' or 'analyze property at [address]'.\n\n";
+      response += "**Note**: These are sample properties. To get real data, please add your Mashvisor and Zillow API keys in the settings.";
+      
+      setChatContext({
+        ...chatContext,
+        comparisonProperties: mockProperties
+      });
+    }
+    
+    return response;
+  }
+  
+  if (lowerMessage.match(/analyze\s+property\s+(\d+)/i)) {
+    const propertyNumberMatch = lowerMessage.match(/analyze\s+property\s+(\d+)/i);
+    const propertyNumber = parseInt(propertyNumberMatch?.[1] || "1") - 1;
+    
+    if (chatContext.comparisonProperties.length > 0 && propertyNumber >= 0 && propertyNumber < chatContext.comparisonProperties.length) {
+      const selectedProperty = chatContext.comparisonProperties[propertyNumber];
+      const analysis = hasRealApiKeys 
+        ? await analyzeRealProperty(selectedProperty)
+        : mockDataService.calculatePropertyAnalysis(selectedProperty);
+      
+      setChatContext({
+        ...chatContext,
+        property: selectedProperty,
+        analysis
+      });
+      
+      response = `Analyzing property at ${selectedProperty.address}, ${selectedProperty.city}, ${selectedProperty.state}:\n\n`;
+      response += formatPropertyAnalysis(analysis);
+    } else {
+      response = "I couldn't find that property number in our search results. Please search for properties first or try a different number.";
+    }
+    
+    return response;
+  }
+  
   if (lowerMessage.includes("analyze property") || 
       lowerMessage.includes("analyze this property") || 
       lowerMessage.includes("property analysis")) {
     
     if (!chatContext.property) {
-      // Use default property if none is set
       const property = defaultPropertyData;
       const analysis = mockDataService.calculatePropertyAnalysis(property);
       
@@ -72,79 +167,92 @@ export const processMessage = async (
     }
   }
   
-  // Check for market trends request
   else if (lowerMessage.includes("market trends") || 
            lowerMessage.includes("market data") || 
            lowerMessage.includes("price trends")) {
     
-    const property = chatContext.property || defaultPropertyData;
-    const marketTrend = mockDataService.getMarketTrends(property.city, property.state);
+    const cityMatch = message.match(/in\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const stateMatch = message.match(/([A-Z]{2})(?:\s+\d{5}|\s*$|,)/);
     
-    response = `Here are the current market trends for ${property.city}, ${property.state}:\n\n`;
-    response += `📈 **Median Home Price**: $${marketTrend.medianHomePrice.toLocaleString()} (${marketTrend.priceChange1Year > 0 ? '+' : ''}${marketTrend.priceChange1Year}% year-over-year)\n`;
-    response += `🏠 **Median Rent**: $${marketTrend.medianRent.toLocaleString()} (${marketTrend.rentChange1Year > 0 ? '+' : ''}${marketTrend.rentChange1Year}% year-over-year)\n`;
-    response += `⏱️ **Average Days on Market**: ${marketTrend.daysOnMarket} days\n`;
-    response += `📊 **Inventory Change**: ${marketTrend.inventoryChange > 0 ? '+' : ''}${marketTrend.inventoryChange}% year-over-year\n\n`;
+    const city = cityMatch ? cityMatch[1].trim() : (chatContext.property ? chatContext.property.city : "Austin");
+    const state = stateMatch ? stateMatch[1].trim() : (chatContext.property ? chatContext.property.state : "TX");
     
-    if (marketTrend.priceChange1Year > 8) {
-      response += "This is a hot seller's market with rapidly appreciating home values. Competition among buyers is likely high.";
-    } else if (marketTrend.priceChange1Year > 3) {
-      response += "This market is showing healthy appreciation, balancing opportunity for both buyers and sellers.";
-    } else if (marketTrend.priceChange1Year > 0) {
-      response += "This market is stable with modest appreciation, which may present good value opportunities.";
+    response = `Here are the current market trends for ${city}, ${state}:\n\n`;
+    
+    if (hasRealApiKeys) {
+      try {
+        const marketData = await mashvisorService.getMarketData(city, state);
+        
+        if (marketData) {
+          response += `📈 **Median Home Price**: $${marketData.median_price.toLocaleString()} (${marketData.price_change_1year > 0 ? '+' : ''}${marketData.price_change_1year}% year-over-year)\n`;
+          response += `🏠 **Median Rent**: $${marketData.median_rent.toLocaleString()} (${marketData.rent_change_1year > 0 ? '+' : ''}${marketData.rent_change_1year}% year-over-year)\n`;
+          response += `⏱️ **Average Days on Market**: ${marketData.days_on_market} days\n`;
+          response += `📊 **Inventory Change**: ${marketData.inventory_change > 0 ? '+' : ''}${marketData.inventory_change}% year-over-year\n\n`;
+          
+          if (marketData.price_change_1year > 8) {
+            response += "This is a hot seller's market with rapidly appreciating home values. Competition among buyers is likely high.";
+          } else if (marketData.price_change_1year > 3) {
+            response += "This market is showing healthy appreciation, balancing opportunity for both buyers and sellers.";
+          } else if (marketData.price_change_1year > 0) {
+            response += "This market is stable with modest appreciation, which may present good value opportunities.";
+          } else {
+            response += "This market is experiencing some price corrections, which could present buying opportunities but also carries risk.";
+          }
+        } else {
+          const mockTrend = mockDataService.getMarketTrends(city, state);
+          response += getMarketTrendResponse(mockTrend);
+          response += "\n\n**Note**: This is using mock data. There was an issue retrieving real data.";
+        }
+      } catch (error) {
+        console.error("Error getting market trends:", error);
+        const mockTrend = mockDataService.getMarketTrends(city, state);
+        response += getMarketTrendResponse(mockTrend);
+        response += "\n\n**Note**: This is using mock data. There was an issue retrieving real data.";
+      }
     } else {
-      response += "This market is experiencing some price corrections, which could present buying opportunities but also carries risk.";
+      const marketTrend = mockDataService.getMarketTrends(city, state);
+      response += getMarketTrendResponse(marketTrend);
+      response += "\n\n**Note**: This is sample data. To get real market trends, please add your API keys in the settings.";
     }
   }
   
-  // Check for neighborhood insights request
   else if (lowerMessage.includes("neighborhood") || 
            lowerMessage.includes("schools") || 
            lowerMessage.includes("safety") || 
            lowerMessage.includes("walkability")) {
     
     const property = chatContext.property || defaultPropertyData;
-    const neighborhoodData = mockDataService.getNeighborhoodData(property.zipCode, property.city, property.state);
     
     response = `Here are neighborhood insights for ${property.city}, ${property.state} ${property.zipCode}:\n\n`;
-    response += `🏫 **School Rating**: ${neighborhoodData.schoolRating}/10\n`;
-    response += `🔒 **Crime Rate**: ${neighborhoodData.crimeRate}\n`;
-    response += `👟 **Walkability Score**: ${neighborhoodData.walkabilityScore}/100\n`;
-    response += `🚌 **Transit Score**: ${neighborhoodData.transitScore}/100\n`;
-    response += `👥 **Population**: ${neighborhoodData.population.toLocaleString()}\n`;
-    response += `💰 **Median Income**: $${neighborhoodData.medianIncome.toLocaleString()}\n`;
-    response += `💼 **Employment Rate**: ${neighborhoodData.employmentRate}%\n\n`;
     
-    // Add some qualitative analysis
-    const insights = [];
-    
-    if (neighborhoodData.schoolRating >= 8) {
-      insights.push("The high school ratings make this area attractive for families with children.");
-    } else if (neighborhoodData.schoolRating < 5) {
-      insights.push("Lower school ratings may affect demand from family renters and future resale value.");
-    }
-    
-    if (neighborhoodData.walkabilityScore >= 80) {
-      insights.push("The excellent walkability is a strong selling point, especially for urban renters.");
-    } else if (neighborhoodData.walkabilityScore < 30) {
-      insights.push("The car-dependent nature of this area may limit appeal to certain tenant groups.");
-    }
-    
-    if (neighborhoodData.crimeRate === "Low") {
-      insights.push("Low crime rates are a positive factor for property values and tenant attraction.");
-    } else if (neighborhoodData.crimeRate === "High") {
-      insights.push("Higher crime rates may impact tenant quality and property appreciation.");
-    }
-    
-    if (insights.length > 0) {
-      response += "**Key Insights**:\n";
-      insights.forEach(insight => {
-        response += `• ${insight}\n`;
-      });
+    if (hasRealApiKeys) {
+      try {
+        const neighborhoodData = await zillowService.getNeighborhoodData(
+          property.zipCode,
+          property.city,
+          property.state
+        );
+        
+        if (neighborhoodData) {
+          response += formatNeighborhoodData(neighborhoodData);
+        } else {
+          const mockData = mockDataService.getNeighborhoodData(property.zipCode, property.city, property.state);
+          response += formatNeighborhoodData(mockData);
+          response += "\n\n**Note**: This is using mock data. There was an issue retrieving real data.";
+        }
+      } catch (error) {
+        console.error("Error getting neighborhood data:", error);
+        const mockData = mockDataService.getNeighborhoodData(property.zipCode, property.city, property.state);
+        response += formatNeighborhoodData(mockData);
+        response += "\n\n**Note**: This is using mock data. There was an issue retrieving real data.";
+      }
+    } else {
+      const neighborhoodData = mockDataService.getNeighborhoodData(property.zipCode, property.city, property.state);
+      response += formatNeighborhoodData(neighborhoodData);
+      response += "\n\n**Note**: This is sample data. To get real neighborhood insights, please add your API keys in the settings.";
     }
   }
   
-  // Check for comparison request
   else if (lowerMessage.includes("compare") || lowerMessage.includes("comparison")) {
     if (chatContext.comparisonProperties.length === 0 && !chatContext.property) {
       response = "I don't have any properties to compare yet. Would you like me to analyze a sample property first?";
@@ -171,12 +279,10 @@ export const processMessage = async (
           response += `| ${property.address.substring(0, 15)}... | $${property.purchasePrice.toLocaleString()} | $${property.monthlyRent.toLocaleString()} | $${analysis.cashFlow.monthly.toLocaleString()} | ${analysis.capRate}% | ${analysis.returnOnInvestment}% |\n`;
         });
         
-        // Find the best property by cash flow
         const bestCashFlow = propertyAnalyses.reduce((prev, current) => 
           prev.analysis.cashFlow.monthly > current.analysis.cashFlow.monthly ? prev : current
         );
         
-        // Find the best property by ROI
         const bestROI = propertyAnalyses.reduce((prev, current) => 
           prev.analysis.returnOnInvestment > current.analysis.returnOnInvestment ? prev : current
         );
@@ -194,13 +300,10 @@ export const processMessage = async (
     }
   }
   
-  // Check for property setup request
   else if (lowerMessage.includes("set property") || 
            lowerMessage.includes("add property") || 
            lowerMessage.includes("new property")) {
     
-    // Parse basic property information from the message
-    // This is a simplistic approach; a real bot would use more sophisticated parsing
     const priceMatch = message.match(/price(?:[\s:]+)?\$?([\d,]+)/i);
     const rentMatch = message.match(/rent(?:[\s:]+)?\$?([\d,]+)/i);
     const addressMatch = message.match(/address(?:[\s:]+)?(.+?)(?:,|\sin|$)/i);
@@ -217,14 +320,14 @@ export const processMessage = async (
       purchasePrice: priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000,
       monthlyRent: rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200,
       annualExpenses: {
-        propertyTax: Math.round(0.012 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)), // Approximately 1.2% of purchase price
-        insurance: Math.round(0.005 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)), // Approximately 0.5% of purchase price
-        maintenance: Math.round(0.005 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)), // Approximately 0.5% of purchase price
-        propertyManagement: Math.round(0.1 * 12 * (rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200)), // Approximately 10% of annual rent
-        vacancy: Math.round(0.05 * 12 * (rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200)), // Approximately 5% of annual rent
+        propertyTax: Math.round(0.012 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+        insurance: Math.round(0.005 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+        maintenance: Math.round(0.005 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+        propertyManagement: Math.round(0.1 * 12 * (rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200)),
+        vacancy: Math.round(0.05 * 12 * (rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200)),
         other: 500
       },
-      downPayment: Math.round(0.2 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)), // Assuming 20% down payment
+      downPayment: Math.round(0.2 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
       interestRate: 5.5,
       loanTerm: 30
     };
@@ -246,22 +349,19 @@ export const processMessage = async (
     response += "Would you like me to analyze this property, show market trends, or provide neighborhood insights?";
   }
   
-  // Check for add comparison property request
   else if (lowerMessage.includes("add comparison") || 
            lowerMessage.includes("add to comparison") || 
            lowerMessage.includes("compare with")) {
     
-    // Create a variant property for comparison
     const baseProperty = chatContext.property || defaultPropertyData;
     
-    // Create a slightly different property
     const compProperty: PropertyData = {
       ...baseProperty,
       id: Date.now().toString(),
       address: baseProperty.address.replace(/\d+/, (match) => String(Number(match) + 100)),
-      purchasePrice: Math.round(baseProperty.purchasePrice * (1 + (Math.random() * 0.2 - 0.1))), // +/- 10%
-      monthlyRent: Math.round(baseProperty.monthlyRent * (1 + (Math.random() * 0.2 - 0.1))), // +/- 10%
-      downPayment: Math.round(baseProperty.downPayment * (1 + (Math.random() * 0.2 - 0.1))), // +/- 10%
+      purchasePrice: Math.round(baseProperty.purchasePrice * (1 + (Math.random() * 0.2 - 0.1))),
+      monthlyRent: Math.round(baseProperty.monthlyRent * (1 + (Math.random() * 0.2 - 0.1))),
+      downPayment: Math.round(baseProperty.downPayment * (1 + (Math.random() * 0.2 - 0.1)))
     };
     
     setChatContext({
@@ -277,7 +377,6 @@ export const processMessage = async (
     response += "You can now use the 'compare properties' command to see a side-by-side comparison.";
   }
   
-  // General greeting or help request
   else if (lowerMessage.includes("hello") || 
            lowerMessage.includes("hi") || 
            lowerMessage.includes("hey") || 
@@ -291,10 +390,9 @@ export const processMessage = async (
     response += "• **Compare properties** - I can help you compare multiple investment opportunities\n";
     response += "• **Generate a report** - I can create a downloadable PDF report of the analysis\n\n";
     
-    response += "To get started, try saying something like 'analyze a property' or 'set property at 123 Main St, Austin, TX with price $350,000 and rent $2,200'.";
+    response += "To get started, try saying something like 'analyze property' or 'set property at 123 Main St, Austin, TX with price $350,000 and rent $2,200'.";
   }
   
-  // Default response if no specific intent is matched
   else {
     response = "I'm sorry, I didn't quite understand that request. You can ask me to:\n\n";
     response += "• Analyze a property\n";
@@ -309,7 +407,93 @@ export const processMessage = async (
   return response;
 };
 
-// Format property analysis results into a readable message
+const analyzeRealProperty = async (property: PropertyData): Promise<PropertyAnalysis> => {
+  try {
+    const zillowData = await zillowService.getPropertyEstimate(
+      property.address,
+      property.city,
+      property.state,
+      property.zipCode
+    );
+    
+    if (zillowData) {
+      const enrichedProperty: PropertyData = {
+        ...property,
+        purchasePrice: zillowData.purchasePrice || property.purchasePrice,
+        monthlyRent: zillowData.monthlyRent || property.monthlyRent,
+        annualExpenses: zillowData.annualExpenses || property.annualExpenses
+      };
+      
+      return mockDataService.calculatePropertyAnalysis(enrichedProperty);
+    }
+    
+    return mockDataService.calculatePropertyAnalysis(property);
+  } catch (error) {
+    console.error("Error analyzing real property:", error);
+    return mockDataService.calculatePropertyAnalysis(property);
+  }
+};
+
+const getMarketTrendResponse = (marketTrend: any) => {
+  let response = '';
+  response += `📈 **Median Home Price**: $${marketTrend.medianHomePrice.toLocaleString()} (${marketTrend.priceChange1Year > 0 ? '+' : ''}${marketTrend.priceChange1Year}% year-over-year)\n`;
+  response += `🏠 **Median Rent**: $${marketTrend.medianRent.toLocaleString()} (${marketTrend.rentChange1Year > 0 ? '+' : ''}${marketTrend.rentChange1Year}% year-over-year)\n`;
+  response += `⏱️ **Average Days on Market**: ${marketTrend.daysOnMarket} days\n`;
+  response += `📊 **Inventory Change**: ${marketTrend.inventoryChange > 0 ? '+' : ''}${marketTrend.inventoryChange}% year-over-year\n\n`;
+  
+  if (marketTrend.priceChange1Year > 8) {
+    response += "This is a hot seller's market with rapidly appreciating home values. Competition among buyers is likely high.";
+  } else if (marketTrend.priceChange1Year > 3) {
+    response += "This market is showing healthy appreciation, balancing opportunity for both buyers and sellers.";
+  } else if (marketTrend.priceChange1Year > 0) {
+    response += "This market is stable with modest appreciation, which may present good value opportunities.";
+  } else {
+    response += "This market is experiencing some price corrections, which could present buying opportunities but also carries risk.";
+  }
+  
+  return response;
+};
+
+const formatNeighborhoodData = (neighborhoodData: NeighborhoodData) => {
+  let response = '';
+  response += `🏫 **School Rating**: ${neighborhoodData.schoolRating}/10\n`;
+  response += `🔒 **Crime Rate**: ${neighborhoodData.crimeRate}\n`;
+  response += `👟 **Walkability Score**: ${neighborhoodData.walkabilityScore}/100\n`;
+  response += `🚌 **Transit Score**: ${neighborhoodData.transitScore}/100\n`;
+  response += `👥 **Population**: ${neighborhoodData.population.toLocaleString()}\n`;
+  response += `💰 **Median Income**: $${neighborhoodData.medianIncome.toLocaleString()}\n`;
+  response += `💼 **Employment Rate**: ${neighborhoodData.employmentRate}%\n\n`;
+  
+  const insights = [];
+  
+  if (neighborhoodData.schoolRating >= 8) {
+    insights.push("The high school ratings make this area attractive for families with children.");
+  } else if (neighborhoodData.schoolRating < 5) {
+    insights.push("Lower school ratings may affect demand from family renters and future resale value.");
+  }
+  
+  if (neighborhoodData.walkabilityScore >= 80) {
+    insights.push("The excellent walkability is a strong selling point, especially for urban renters.");
+  } else if (neighborhoodData.walkabilityScore < 30) {
+    insights.push("The car-dependent nature of this area may limit appeal to certain tenant groups.");
+  }
+  
+  if (neighborhoodData.crimeRate === "Low") {
+    insights.push("Low crime rates are a positive factor for property values and tenant attraction.");
+  } else if (neighborhoodData.crimeRate === "High") {
+    insights.push("Higher crime rates may impact tenant quality and property appreciation.");
+  }
+  
+  if (insights.length > 0) {
+    response += "**Key Insights**:\n";
+    insights.forEach(insight => {
+      response += `• ${insight}\n`;
+    });
+  }
+  
+  return response;
+};
+
 const formatPropertyAnalysis = (analysis: PropertyAnalysis): string => {
   let result = "**Financial Analysis**:\n\n";
   
@@ -320,7 +504,6 @@ const formatPropertyAnalysis = (analysis: PropertyAnalysis): string => {
   result += `📈 **Return on Investment**: ${analysis.returnOnInvestment}%\n`;
   result += `⏱️ **Break-even Point**: ${Math.round(analysis.breakEvenPoint)} months\n\n`;
   
-  // Add some qualitative analysis
   const insights = [];
   
   if (analysis.capRate >= 8) {

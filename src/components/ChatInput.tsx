@@ -1,9 +1,20 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, HelpCircle, Loader2, Sparkles } from "lucide-react";
+import { Send, HelpCircle, Loader2, Sparkles, Key } from "lucide-react";
 import { useState } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/sonner";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -13,13 +24,16 @@ interface ChatInputProps {
 const SAMPLE_QUESTIONS = [
   "What factors should I consider when investing in a rental property?",
   "How do I calculate cap rate for a property?",
-  "What are the current market trends in Austin, Texas?",
-  "How much should I budget for property maintenance?",
-  "What's a good debt-to-income ratio for property investment?"
+  "Show me real estate market trends in Austin, Texas",
+  "Find investment properties in Miami, Florida",
+  "Analyze a property at 123 Main St, San Francisco, CA 94105"
 ];
 
 const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
+  const [mashvisorApiKey, setMashvisorApiKey] = useState(localStorage.getItem("mashvisor_api_key") || "");
+  const [zillowApiKey, setZillowApiKey] = useState(localStorage.getItem("zillow_api_key") || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +48,15 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
     setMessage(question);
   };
 
+  const saveApiKeys = () => {
+    localStorage.setItem("mashvisor_api_key", mashvisorApiKey);
+    localStorage.setItem("zillow_api_key", zillowApiKey);
+    setIsApiDialogOpen(false);
+    toast("API keys saved successfully", {
+      description: "Your API keys have been securely saved to your browser's local storage."
+    });
+  };
+
   return (
     <div className="border-t p-4 bg-background/30 backdrop-blur-sm">
       <form 
@@ -42,12 +65,65 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
       >
         <div className="flex-1 relative">
           <Input
-            className="w-full bg-white/60 backdrop-blur-sm border-realty-200 focus-visible:ring-realty-500 pr-10 shadow-sm rounded-full pl-4"
+            className="w-full bg-white/60 backdrop-blur-sm border-realty-200 focus-visible:ring-realty-500 pr-10 pl-10 shadow-sm rounded-full"
             placeholder="Type your message here..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={isLoading}
           />
+          
+          <Dialog open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-realty-700 rounded-full"
+                type="button"
+              >
+                <Key className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] glass-card">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  <span>API Key Settings</span>
+                </DialogTitle>
+                <DialogDescription>
+                  Enter your API keys to enable real property data
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="mashvisor" className="text-right">
+                    Mashvisor
+                  </Label>
+                  <Input
+                    id="mashvisor"
+                    type="password"
+                    value={mashvisorApiKey}
+                    onChange={(e) => setMashvisorApiKey(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="zillow" className="text-right">
+                    Zillow
+                  </Label>
+                  <Input
+                    id="zillow"
+                    type="password"
+                    value={zillowApiKey}
+                    onChange={(e) => setZillowApiKey(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={saveApiKeys} className="bg-gradient-to-r from-realty-600 to-realty-700">Save</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           
           <HoverCard>
             <HoverCardTrigger asChild>
