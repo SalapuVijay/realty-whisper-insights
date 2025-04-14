@@ -123,7 +123,7 @@
 }
 
 .typing-animation::after {
-  content: '...';
+  content: '';
   display: inline-block;
   animation: ellipsis 1.5s infinite;
 }
@@ -132,4 +132,53 @@
   0% { content: '.'; }
   33% { content: '..'; }
   66% { content: '...'; }
+}
+
+/* Add some nice grid pattern for backgrounds */
+.bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Adding hover effects to cards */
+.hover-card-effect {
+  @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
+}
+
+/* Message card animations */
+.message-card {
+  @apply transition-all duration-300;
+  animation: messageSlideIn 0.3s ease-out forwards;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse animation for indicators */
+.animate-pulse-custom {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Gradient text effect */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-realty-600 to-realty-800;
 }
