@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { PropertyData } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Home, Walking, Bike, Bus } from 'lucide-react';
+import { AlertCircle, Home, Footprints, Bike, Bus } from 'lucide-react';
+import { ProgressWithIndicator } from '@/components/ui/progress-with-indicator';
 
 interface WalkScoreWidgetProps {
   property: PropertyData | null;
@@ -76,7 +76,7 @@ const WalkScoreWidget = ({ property }: WalkScoreWidgetProps) => {
     <Card>
       <CardHeader className="py-3">
         <CardTitle className="text-base font-medium flex items-center gap-2">
-          <Walking className="h-4 w-4 text-green-500" />
+          <Footprints className="h-4 w-4 text-green-500" />
           Walkability & Transit Scores
         </CardTitle>
       </CardHeader>
@@ -107,12 +107,12 @@ const WalkScoreWidget = ({ property }: WalkScoreWidgetProps) => {
             <div>
               <div className="flex justify-between mb-1">
                 <div className="flex items-center gap-1">
-                  <Walking className="h-3.5 w-3.5 text-green-500" />
+                  <Footprints className="h-3.5 w-3.5 text-green-500" />
                   <span className="text-sm font-medium">Walk Score</span>
                 </div>
                 <span className="text-sm font-bold">{scores.walkScore}/100</span>
               </div>
-              <Progress 
+              <ProgressWithIndicator 
                 value={scores.walkScore} 
                 className="h-2.5" 
                 indicatorClassName={getScoreColor(scores.walkScore)} 
@@ -128,7 +128,7 @@ const WalkScoreWidget = ({ property }: WalkScoreWidgetProps) => {
                 </div>
                 <span className="text-sm font-bold">{scores.transitScore}/100</span>
               </div>
-              <Progress 
+              <ProgressWithIndicator 
                 value={scores.transitScore} 
                 className="h-2.5" 
                 indicatorClassName={getScoreColor(scores.transitScore)} 
@@ -149,7 +149,7 @@ const WalkScoreWidget = ({ property }: WalkScoreWidgetProps) => {
                 </div>
                 <span className="text-sm font-bold">{scores.bikeScore}/100</span>
               </div>
-              <Progress 
+              <ProgressWithIndicator 
                 value={scores.bikeScore} 
                 className="h-2.5" 
                 indicatorClassName={getScoreColor(scores.bikeScore)} 

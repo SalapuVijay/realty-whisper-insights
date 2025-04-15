@@ -1,142 +1,168 @@
 
-import { PropertyData } from "@/types";
+import { PropertyData, MarketTrend, NeighborhoodData } from "@/types";
+import { getApiKey } from "@/utils/apiUtils";
 
-// Define types for Realtor.com API responses
-interface RealtorPropertyResponse {
-  properties: RealtorProperty[];
-  meta: {
-    total: number;
-    count: number;
-  };
-}
-
-interface RealtorProperty {
-  property_id: string;
-  address: {
-    line: string;
-    city: string;
-    state: string;
-    postal_code: string;
-  };
-  price: number;
-  beds: number;
-  baths: number;
-  building_size: {
-    size: number;
-    units: string;
-  };
-  thumbnail: string;
-  lat: number;
-  lon: number;
-  year_built: number;
-  property_type: string;
-}
-
-/**
- * Search for properties using the Realtor.com API
- */
-export const searchProperties = async (location: string, minPrice?: number, maxPrice?: number): Promise<PropertyData[]> => {
-  const apiKey = localStorage.getItem("realtor_api_key");
-  
+export const searchProperties = async (location: string, minPrice?: number, maxPrice?: number, bedrooms?: number): Promise<PropertyData[]> => {
+  const apiKey = getApiKey("realtor");
   if (!apiKey) {
     throw new Error("Realtor.com API key is required");
   }
+
+  // In a real application, this would be a fetch call to the Realtor.com API
+  console.log(`Searching properties in ${location} with Realtor.com API key: ${apiKey}`);
   
-  try {
-    // This would be a real API call in production
-    console.log(`Searching properties in ${location} with Realtor.com API`);
-    
-    // Mock data for demonstration
-    return mockSearchProperties(location);
-  } catch (error) {
-    console.error("Error searching properties with Realtor.com API:", error);
-    throw error;
-  }
+  // For now, return mock data
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve([
+        mockProperty1,
+        mockProperty2,
+        mockProperty3
+      ]);
+    }, 1000);
+  });
 };
 
-/**
- * Get property details from Realtor.com API
- */
-export const getPropertyDetails = async (propertyId: string): Promise<PropertyData> => {
-  const apiKey = localStorage.getItem("realtor_api_key");
-  
+export const getPropertyDetails = async (propertyId: string): Promise<PropertyData | null> => {
+  const apiKey = getApiKey("realtor");
   if (!apiKey) {
     throw new Error("Realtor.com API key is required");
   }
+
+  console.log(`Getting details for property ${propertyId} with Realtor.com API key: ${apiKey}`);
   
-  try {
-    // This would be a real API call in production
-    console.log(`Getting property details for ${propertyId} with Realtor.com API`);
-    
-    // Mock data for demonstration
-    return mockPropertyDetails(propertyId);
-  } catch (error) {
-    console.error("Error getting property details with Realtor.com API:", error);
-    throw error;
+  // Return mock data
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      if (propertyId === "property1") {
+        resolve(mockProperty1);
+      } else if (propertyId === "property2") {
+        resolve(mockProperty2);
+      } else if (propertyId === "property3") {
+        resolve(mockProperty3);
+      } else {
+        resolve(null);
+      }
+    }, 800);
+  });
+};
+
+export const getMarketTrends = async (city: string, state: string): Promise<MarketTrend | null> => {
+  const apiKey = getApiKey("realtor");
+  if (!apiKey) {
+    throw new Error("Realtor.com API key is required");
   }
+
+  console.log(`Getting market trends for ${city}, ${state} with Realtor.com API key: ${apiKey}`);
+  
+  // Return mock data
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(mockMarketTrend);
+    }, 1200);
+  });
 };
 
-// Mock implementation
-const mockSearchProperties = (location: string): PropertyData[] => {
-  return [
-    {
-      id: "property-1",
-      address: `123 Main St, ${location}`,
-      price: 450000,
-      beds: 3,
-      baths: 2,
-      sqft: 1800,
-      yearBuilt: 2005,
-      propertyType: "Single Family",
-      lat: 37.7749,
-      lng: -122.4194,
-      imageUrl: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&q=75&fit=crop&w=600",
-      description: "Beautiful single family home in desirable neighborhood."
-    },
-    {
-      id: "property-2",
-      address: `456 Oak Ave, ${location}`,
-      price: 349000,
-      beds: 2,
-      baths: 2,
-      sqft: 1200,
-      yearBuilt: 2010,
-      propertyType: "Condo",
-      lat: 37.7833,
-      lng: -122.4167,
-      imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&q=75&fit=crop&w=600",
-      description: "Modern condo with amazing amenities."
-    },
-    {
-      id: "property-3",
-      address: `789 Pine St, ${location}`,
-      price: 625000,
-      beds: 4,
-      baths: 3,
-      sqft: 2400,
-      yearBuilt: 1998,
-      propertyType: "Single Family",
-      lat: 37.7694,
-      lng: -122.4862,
-      imageUrl: "https://images.unsplash.com/photo-1416331108676-a22ccb276e35?auto=format&q=75&fit=crop&w=600",
-      description: "Spacious family home with large backyard."
-    }
-  ];
+export const getNeighborhoodData = async (zipCode: string): Promise<NeighborhoodData | null> => {
+  const apiKey = getApiKey("realtor");
+  if (!apiKey) {
+    throw new Error("Realtor.com API key is required");
+  }
+
+  console.log(`Getting neighborhood data for zip code ${zipCode} with Realtor.com API key: ${apiKey}`);
+  
+  // Return mock data
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(mockNeighborhoodData);
+    }, 1000);
+  });
 };
 
-const mockPropertyDetails = (propertyId: string): PropertyData => {
-  return {
-    id: propertyId,
-    address: "123 Main St, San Francisco, CA 94105",
-    price: 450000,
-    beds: 3,
-    baths: 2,
-    sqft: 1800,
-    yearBuilt: 2005,
-    propertyType: "Single Family",
-    lat: 37.7749,
-    lng: -122.4194,
-    imageUrl: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&q=75&fit=crop&w=600",
-    description: "Beautiful single family home in desirable neighborhood."
-  };
+// Mock data
+const mockProperty1: PropertyData = {
+  id: "property1",
+  address: "123 Main St",
+  city: "San Francisco",
+  state: "CA",
+  zipCode: "94105",
+  purchasePrice: 1200000,
+  monthlyRent: 4500,
+  annualExpenses: {
+    propertyTax: 12000,
+    insurance: 3600,
+    maintenance: 6000,
+    propertyManagement: 5400,
+    vacancy: 2700,
+    other: 1200
+  },
+  downPayment: 240000,
+  interestRate: 4.5,
+  loanTerm: 30
+};
+
+const mockProperty2: PropertyData = {
+  id: "property2",
+  address: "456 Market St",
+  city: "San Francisco",
+  state: "CA",
+  zipCode: "94103",
+  purchasePrice: 950000,
+  monthlyRent: 3800,
+  annualExpenses: {
+    propertyTax: 9500,
+    insurance: 2800,
+    maintenance: 4750,
+    propertyManagement: 4560,
+    vacancy: 2280,
+    other: 950
+  },
+  downPayment: 190000,
+  interestRate: 4.25,
+  loanTerm: 30
+};
+
+const mockProperty3: PropertyData = {
+  id: "property3",
+  address: "789 Valencia St",
+  city: "San Francisco",
+  state: "CA",
+  zipCode: "94110",
+  purchasePrice: 1450000,
+  monthlyRent: 5200,
+  annualExpenses: {
+    propertyTax: 14500,
+    insurance: 4350,
+    maintenance: 7250,
+    propertyManagement: 6240,
+    vacancy: 3120,
+    other: 1450
+  },
+  downPayment: 290000,
+  interestRate: 4.75,
+  loanTerm: 30
+};
+
+const mockMarketTrend: MarketTrend = {
+  city: "San Francisco",
+  state: "CA",
+  medianHomePrice: 1250000,
+  priceChange1Year: 4.2,
+  medianRent: 3800,
+  rentChange1Year: 2.8,
+  daysOnMarket: 22,
+  inventoryChange: -5.3
+};
+
+const mockNeighborhoodData: NeighborhoodData = {
+  zipCode: "94105",
+  city: "San Francisco",
+  state: "CA",
+  schoolRating: 8.2,
+  crimeRate: "Low",
+  walkabilityScore: 92,
+  transitScore: 95,
+  population: 25000,
+  medianIncome: 120000,
+  employmentRate: 97.3
 };
