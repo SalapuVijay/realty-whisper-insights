@@ -14,6 +14,14 @@ interface ChatMessageProps {
   message: ChatMessageType;
 }
 
+// Define the proper type for the code component props
+interface CodeProps {
+  node?: any;
+  inline?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}
+
 const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.role === "user";
   const timestamp = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -62,7 +70,8 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           <div className="space-y-1">
             <ReactMarkdown
               children={message.content}
-              remarkPlugins={[remarkGfm as any]} // Fixes TS2322 type error
+              // Fix type error by casting remarkGfm to any
+              remarkPlugins={[remarkGfm as any]}
               rehypePlugins={[rehypeHighlight]}
               className={cn(
                 "prose-sm max-w-none break-words",
@@ -87,7 +96,8 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                 h3: (props) => <h3 className="text-sm font-bold mt-2 mb-1" {...props} />,
                 strong: (props) => <strong className="font-bold text-realty-700" {...props} />,
                 hr: () => <hr className="my-2 border-gray-200" />,
-                code({ node, inline, className, children, ...props }) {
+                // Fix inline prop by typing the code component correctly
+                code: ({ className, children, ...props }: CodeProps) => {
                   return (
                     <code
                       className={`${className} px-1 py-0.5 bg-gray-200 rounded font-mono text-sm`}
