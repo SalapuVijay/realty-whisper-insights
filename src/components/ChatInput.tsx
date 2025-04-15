@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -26,7 +27,10 @@ const SAMPLE_QUESTIONS = [
   "How do I calculate cap rate for a property?",
   "Show me real estate market trends in Austin, Texas",
   "Find investment properties in Miami, Florida",
-  "Analyze a property at 123 Main St, San Francisco, CA 94105"
+  "Analyze a property at 123 Main St, San Francisco, CA 94105",
+  "What's the walkability score for Downtown Chicago?",
+  "Compare property values in Seattle vs Portland",
+  "Show me a map of investment opportunities in Phoenix"
 ];
 
 const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
@@ -34,6 +38,10 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
   const [mashvisorApiKey, setMashvisorApiKey] = useState(localStorage.getItem("mashvisor_api_key") || "");
   const [zillowApiKey, setZillowApiKey] = useState(localStorage.getItem("zillow_api_key") || "");
+  const [realtorApiKey, setRealtorApiKey] = useState(localStorage.getItem("realtor_api_key") || "");
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState(localStorage.getItem("google_maps_api_key") || "");
+  const [walkScoreApiKey, setWalkScoreApiKey] = useState(localStorage.getItem("walkscore_api_key") || "");
+  const [dialogflowApiKey, setDialogflowApiKey] = useState(localStorage.getItem("dialogflow_api_key") || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +59,11 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   const saveApiKeys = () => {
     localStorage.setItem("mashvisor_api_key", mashvisorApiKey);
     localStorage.setItem("zillow_api_key", zillowApiKey);
+    localStorage.setItem("realtor_api_key", realtorApiKey);
+    localStorage.setItem("google_maps_api_key", googleMapsApiKey);
+    localStorage.setItem("walkscore_api_key", walkScoreApiKey);
+    localStorage.setItem("dialogflow_api_key", dialogflowApiKey);
+    
     setIsApiDialogOpen(false);
     toast("API keys saved successfully", {
       description: "Your API keys have been securely saved to your browser's local storage."
@@ -83,7 +96,7 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
                 <Key className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] glass-card">
+            <DialogContent className="sm:max-w-[500px] glass-card">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Key className="h-4 w-4" />
@@ -93,32 +106,92 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
                   Enter your API keys to enable real property data
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="mashvisor" className="text-right">
-                    Mashvisor
-                  </Label>
-                  <Input
-                    id="mashvisor"
-                    type="password"
-                    value={mashvisorApiKey}
-                    onChange={(e) => setMashvisorApiKey(e.target.value)}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="zillow" className="text-right">
-                    Zillow
-                  </Label>
-                  <Input
-                    id="zillow"
-                    type="password"
-                    value={zillowApiKey}
-                    onChange={(e) => setZillowApiKey(e.target.value)}
-                    className="col-span-3"
-                  />
-                </div>
-              </div>
+              
+              <Tabs defaultValue="property-apis" className="w-full">
+                <TabsList className="grid grid-cols-2 mb-2">
+                  <TabsTrigger value="property-apis">Property APIs</TabsTrigger>
+                  <TabsTrigger value="additional-apis">Additional APIs</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="property-apis" className="space-y-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="mashvisor" className="text-right">
+                      Mashvisor
+                    </Label>
+                    <Input
+                      id="mashvisor"
+                      type="password"
+                      value={mashvisorApiKey}
+                      onChange={(e) => setMashvisorApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="zillow" className="text-right">
+                      Zillow
+                    </Label>
+                    <Input
+                      id="zillow"
+                      type="password"
+                      value={zillowApiKey}
+                      onChange={(e) => setZillowApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="realtor" className="text-right">
+                      Realtor.com
+                    </Label>
+                    <Input
+                      id="realtor"
+                      type="password"
+                      value={realtorApiKey}
+                      onChange={(e) => setRealtorApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="additional-apis" className="space-y-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="google-maps" className="text-right">
+                      Google Maps
+                    </Label>
+                    <Input
+                      id="google-maps"
+                      type="password"
+                      value={googleMapsApiKey}
+                      onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="walkscore" className="text-right">
+                      Walk Score
+                    </Label>
+                    <Input
+                      id="walkscore"
+                      type="password"
+                      value={walkScoreApiKey}
+                      onChange={(e) => setWalkScoreApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="dialogflow" className="text-right">
+                      Dialogflow
+                    </Label>
+                    <Input
+                      id="dialogflow"
+                      type="password"
+                      value={dialogflowApiKey}
+                      onChange={(e) => setDialogflowApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+              
               <DialogFooter>
                 <Button onClick={saveApiKeys} className="bg-gradient-to-r from-realty-600 to-realty-700">Save</Button>
               </DialogFooter>

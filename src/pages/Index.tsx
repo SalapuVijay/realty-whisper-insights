@@ -5,8 +5,10 @@ import ChatContainer from "@/components/ChatContainer";
 import PropertyAnalysisPanel from "@/components/PropertyAnalysisPanel";
 import MarketTrendsPanel from "@/components/MarketTrendsPanel";
 import NeighborhoodPanel from "@/components/NeighborhoodPanel";
+import GoogleMapView from "@/components/GoogleMapView";
+import WalkScoreWidget from "@/components/WalkScoreWidget";
 import { PropertyData, PropertyAnalysis } from "@/types";
-import { Clock, TrendingUp, MapPin } from "lucide-react";
+import { Clock, TrendingUp, MapPin, Home, Map } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 const Index = () => {
@@ -17,11 +19,23 @@ const Index = () => {
   useEffect(() => {
     const mashvisorApiKey = localStorage.getItem("mashvisor_api_key");
     const zillowApiKey = localStorage.getItem("zillow_api_key");
+    const realtorApiKey = localStorage.getItem("realtor_api_key");
+    const googleMapsApiKey = localStorage.getItem("google_maps_api_key");
+    const walkScoreApiKey = localStorage.getItem("walkscore_api_key");
+    const dialogflowApiKey = localStorage.getItem("dialogflow_api_key");
     
-    if (!mashvisorApiKey || !zillowApiKey) {
+    const missingKeys = [];
+    if (!mashvisorApiKey) missingKeys.push("Mashvisor");
+    if (!zillowApiKey) missingKeys.push("Zillow");
+    if (!realtorApiKey) missingKeys.push("Realtor.com");
+    if (!googleMapsApiKey) missingKeys.push("Google Maps");
+    if (!walkScoreApiKey) missingKeys.push("Walk Score");
+    if (!dialogflowApiKey) missingKeys.push("Dialogflow");
+    
+    if (missingKeys.length > 0) {
       setTimeout(() => {
         toast("API Keys Not Set", {
-          description: "Click the key icon in the chat input to add your Mashvisor and Zillow API keys for real property data.",
+          description: `Click the key icon in the chat input to add your ${missingKeys.join(", ")} API keys for real property data.`,
           duration: 5000,
         });
       }, 2000);
@@ -30,6 +44,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1582407947304-fd86f028f716?q=80&w=2400&auto=format&fit=crop')] bg-cover opacity-5"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-realty-100/70 via-white/90 to-realty-50/80"></div>
+      </div>
+      
       <Header />
       
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
@@ -74,6 +93,24 @@ const Index = () => {
               </div>
               <NeighborhoodPanel property={property} />
             </div>
+            
+            {property && (
+              <>
+                <div className="hover-card-effect glass-card glow-effect">
+                  <div className="absolute -top-3 -right-3 bg-blue-600 text-white p-2 rounded-full shadow-lg">
+                    <Map size={16} />
+                  </div>
+                  <GoogleMapView property={property} />
+                </div>
+                
+                <div className="hover-card-effect glass-card glow-effect">
+                  <div className="absolute -top-3 -right-3 bg-green-600 text-white p-2 rounded-full shadow-lg">
+                    <Home size={16} />
+                  </div>
+                  <WalkScoreWidget property={property} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

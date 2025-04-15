@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Bot, User, Loader2, Clock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/lib/utils";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
@@ -49,7 +50,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           "px-4 py-3 max-w-[85%] sm:max-w-[75%] transition-all message-card relative",
           isUser 
             ? "bg-gradient-to-r from-realty-600 to-realty-700 text-white shadow-lg rounded-2xl rounded-tr-none border-none" 
-            : "glass-card rounded-2xl rounded-tl-none"
+            : "glass-card rounded-2xl rounded-tl-none border-realty-200/30 backdrop-blur-md"
         )}
       >
         {message.isTyping ? (
@@ -62,6 +63,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             <ReactMarkdown
               children={message.content}
               remarkPlugins={[remarkGfm as any]} // Fixes TS2322 type error
+              rehypePlugins={[rehypeHighlight]}
               className={cn(
                 "prose-sm max-w-none break-words",
                 !isUser && "prose-headings:text-realty-700 prose-a:text-realty-600"
@@ -85,7 +87,16 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                 h3: (props) => <h3 className="text-sm font-bold mt-2 mb-1" {...props} />,
                 strong: (props) => <strong className="font-bold text-realty-700" {...props} />,
                 hr: () => <hr className="my-2 border-gray-200" />,
-                code: (props) => <code className="bg-gray-100 rounded px-1 py-0.5 text-realty-700" {...props} />
+                code({ node, inline, className, children, ...props }) {
+                  return (
+                    <code
+                      className={`${className} px-1 py-0.5 bg-gray-200 rounded font-mono text-sm`}
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  );
+                },
               }}
             />
             
