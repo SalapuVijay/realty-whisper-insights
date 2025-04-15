@@ -1,9 +1,10 @@
 
+import React from 'react';
 import { ChatMessage as ChatMessageType } from "@/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Bot, User, Loader2, Clock } from "lucide-react";
-import Markdown from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
@@ -58,12 +59,13 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           </div>
         ) : (
           <div className="space-y-1">
-            <Markdown 
+            <ReactMarkdown
+              children={message.content}
+              remarkPlugins={[remarkGfm as any]} // Fixes TS2322 type error
               className={cn(
                 "prose-sm max-w-none break-words",
                 !isUser && "prose-headings:text-realty-700 prose-a:text-realty-600"
               )}
-              remarkPlugins={[remarkGfm]}
               components={{
                 table: (props) => (
                   <div className="overflow-x-auto my-2 rounded-md border">
@@ -85,9 +87,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                 hr: () => <hr className="my-2 border-gray-200" />,
                 code: (props) => <code className="bg-gray-100 rounded px-1 py-0.5 text-realty-700" {...props} />
               }}
-            >
-              {message.content}
-            </Markdown>
+            />
             
             <div className="text-xs opacity-70 text-right pt-1 flex items-center justify-end gap-1">
               <Clock className="h-3 w-3" />
