@@ -69,9 +69,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         ) : (
           <div className="space-y-1">
             <ReactMarkdown
-              children={message.content}
-              // Use a more aggressive type assertion to resolve the type mismatch with remarkGfm
-              remarkPlugins={[() => remarkGfm() as any]}
+              remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
               className={cn(
                 "prose-sm max-w-none break-words",
@@ -108,7 +106,9 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
                   );
                 },
               }}
-            />
+            >
+              {message.content}
+            </ReactMarkdown>
             
             <div className="text-xs opacity-70 text-right pt-1 flex items-center justify-end gap-1">
               <Clock className="h-3 w-3" />
