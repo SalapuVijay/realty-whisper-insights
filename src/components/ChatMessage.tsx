@@ -70,8 +70,8 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           <div className="space-y-1">
             <ReactMarkdown
               children={message.content}
-              // Fix type error by casting remarkGfm to any
-              remarkPlugins={[remarkGfm as any]}
+              // Use a more aggressive type assertion to resolve the type mismatch with remarkGfm
+              remarkPlugins={[() => remarkGfm() as any]}
               rehypePlugins={[rehypeHighlight]}
               className={cn(
                 "prose-sm max-w-none break-words",
