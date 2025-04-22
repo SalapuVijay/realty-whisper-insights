@@ -69,8 +69,9 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         ) : (
           <div className="space-y-1">
             <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
+              // Use type assertion to resolve plugin type issues
+              remarkPlugins={[remarkGfm as any]}
+              rehypePlugins={[rehypeHighlight as any]}
               className={cn(
                 "prose-sm max-w-none break-words",
                 !isUser && "prose-headings:text-realty-700 prose-a:text-realty-600"
