@@ -1,4 +1,3 @@
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -26,6 +25,23 @@ export interface PropertyData {
   downPayment: number;
   interestRate: number;
   loanTerm: number;
+  latitude?: number;
+  longitude?: number;
+  additionalData?: {
+    yearBuilt?: number;
+    beds?: number;
+    baths?: number;
+    sqft?: number;
+    taxValue?: number;
+    landValue?: number;
+    ownerName?: string;
+    assessmentHistory?: Array<{
+      year: number;
+      land_value: number;
+      improvement_value: number;
+      total_value: number;
+    }>;
+  };
 }
 
 export interface PropertyAnalysis {
@@ -64,4 +80,15 @@ export interface NeighborhoodData {
   population: number;
   medianIncome: number;
   employmentRate: number;
+}
+
+export interface ApiKeys {
+  huggingface: string | null;
+  estated: string | null;
+  walkscore: string | null;
+  googlePlaces: string | null;
+  realtor: string | null;
+  zillow: string | null;
+  mashvisor: string | null;
+  dialogflow: string | null;
 }

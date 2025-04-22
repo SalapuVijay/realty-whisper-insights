@@ -2,6 +2,10 @@ import { ChatMessage, NeighborhoodData, PropertyData, PropertyAnalysis } from "@
 import { mockDataService } from "@/services/mockDataService";
 import * as mashvisorService from "@/services/mashvisorService";
 import * as zillowService from "@/services/zillowService";
+import * as estatedService from "@/services/estatedService";
+import * as walkScoreService from "@/services/walkScoreService";
+import * as googlePlacesService from "@/services/googlePlacesService";
+import * as huggingfaceService from "@/services/huggingfaceService";
 
 export type ChatContextType = {
   property: PropertyData | null;
@@ -10,6 +14,16 @@ export type ChatContextType = {
   comparisonProperties: PropertyData[];
   addComparisonProperty: (property: PropertyData) => void;
   removeComparisonProperty: (id: string) => void;
+  apiKeys?: {
+    mashvisor: string | null;
+    zillow: string | null;
+    realtor: string | null;
+    googleMaps: string | null;
+    walkScore: string | null;
+    dialogflow: string | null;
+    huggingface: string | null;
+    estated: string | null;
+  }
 };
 
 const defaultPropertyData: PropertyData = {
@@ -41,9 +55,18 @@ export const processMessage = async (
   const lowerMessage = message.toLowerCase();
   let response = "";
   
-  const mashvisorApiKey = localStorage.getItem("mashvisor_api_key");
-  const zillowApiKey = localStorage.getItem("zillow_api_key");
-  const hasRealApiKeys = mashvisorApiKey && zillowApiKey;
+  const apiKeys = chatContext.apiKeys || {
+    mashvisor: localStorage.getItem("mashvisor_api_key"),
+    zillow: localStorage.getItem("zillow_api_key"),
+    realtor: localStorage.getItem("realtor_api_key"),
+    googleMaps: localStorage.getItem("google_maps_api_key"),
+    walkScore: localStorage.getItem("walkscore_api_key"),
+    dialogflow: localStorage.getItem("dialogflow_api_key"),
+    huggingface: localStorage.getItem("huggingface_api_key"),
+    estated: localStorage.getItem("estated_api_key")
+  };
+  
+  const hasRealApiKeys = apiKeys.mashvisor && apiKeys.zillow;
 
   if (lowerMessage.includes("find property") || 
       lowerMessage.includes("search for property") || 
@@ -377,6 +400,488 @@ export const processMessage = async (
     response += "You can now use the 'compare properties' command to see a side-by-side comparison.";
   }
   
+  else if (lowerMessage.includes("property history") || 
+           lowerMessage.includes("property details") || 
+           lowerMessage.includes("property info") ||
+           lowerMessage.includes("tax history")) {
+    
+    const addressMatch = message.match(/at\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const cityMatch = message.match(/in\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const stateMatch = message.match(/([A-Z]{2})(?:\s+\d{5}|\s*$|,)/);
+    const zipMatch = message.match(/(\d{5})/);
+    
+    const address = addressMatch ? addressMatch[1].trim() : (chatContext.property ? chatContext.property.address : "123 Main St");
+    const city = cityMatch ? cityMatch[1].trim() : (chatContext.property ? chatContext.property.city : "Austin");
+    const state = stateMatch ? stateMatch[1].trim() : (chatContext.property ? chatContext.property.state : "TX");
+    const zipCode = zipMatch ? zipMatch[1].trim() : (chatContext.property ? chatContext.property.zipCode : "78701");
+    
+    response = `Fetching property details for ${address}, ${city}, ${state} ${zipCode}...\n\n`;
+    
+    if (apiKeys.estated) {
+      try {
+        const propertyDetails = await estatedService.getPropertyDetails(address, city, state, zipCode, apiKeys.estated);
+        
+        if (propertyDetails) {
+          if (chatContext.property) {
+            setChatContext({
+              ...chatContext,
+              property: {
+                ...chatContext.property,
+                ...propertyDetails,
+              }
+            });
+          } else {
+            const newProperty: PropertyData = {
+              id: uuidv4(),
+              address: propertyDetails.address || address,
+              city: propertyDetails.city || city,
+              state: propertyDetails.state || state,
+              zipCode: propertyDetails.zipCode || zipCode,
+              purchasePrice: propertyDetails.purchasePrice || 350000,
+              monthlyRent: 0,
+              annualExpenses: {
+                propertyTax: propertyDetails.additionalData?.taxValue || 0,
+                insurance: 0,
+                maintenance: 0,
+                propertyManagement: 0,
+                vacancy: 0,
+                other: 0
+              },
+              downPayment: (propertyDetails.purchasePrice || 350000) * 0.2,
+              interestRate: 5.5,
+              loanTerm: 30,
+              additionalData: propertyDetails.additionalData
+            };
+            
+            setChatContext({
+              ...chatContext,
+              property: newProperty
+            });
+          }
+          
+          response = `**Property Details for ${address}, ${city}, ${state} ${zipCode}**\n\n`;
+          
+          if (propertyDetails.additionalData) {
+            response += `🏠 **Property Characteristics**\n`;
+            response += `• Year Built: ${propertyDetails.additionalData.yearBuilt || 'N/A'}\n`;
+            response += `• Bedrooms: ${propertyDetails.additionalData.beds || 'N/A'}\n`;
+            response += `• Bathrooms: ${propertyDetails.additionalData.baths || 'N/A'}\n`;
+            response += `• Square Footage: ${propertyDetails.additionalData.sqft ? propertyDetails.additionalData.sqft.toLocaleString() : 'N/A'} sq ft\n\n`;
+            
+            response += `💰 **Valuation Information**\n`;
+            response += `• Estimated Value: $${propertyDetails.purchasePrice ? propertyDetails.purchasePrice.toLocaleString() : 'N/A'}\n`;
+            response += `• Tax Assessment: $${propertyDetails.additionalData.taxValue ? propertyDetails.additionalData.taxValue.toLocaleString() : 'N/A'}\n`;
+            response += `• Land Value: $${propertyDetails.additionalData.landValue ? propertyDetails.additionalData.landValue.toLocaleString() : 'N/A'}\n\n`;
+            
+            if (propertyDetails.additionalData.ownerName) {
+              response += `📋 **Ownership**\n`;
+              response += `• Current Owner: ${propertyDetails.additionalData.ownerName}\n\n`;
+            }
+            
+            if (propertyDetails.additionalData.assessmentHistory && propertyDetails.additionalData.assessmentHistory.length > 0) {
+              response += `📊 **Assessment History**\n`;
+              
+              const sortedHistory = [...propertyDetails.additionalData.assessmentHistory]
+                .sort((a, b) => b.year - a.year);
+              
+              for (let i = 0; i < Math.min(3, sortedHistory.length); i++) {
+                const history = sortedHistory[i];
+                response += `• ${history.year}: $${history.total_value.toLocaleString()} (Land: $${history.land_value.toLocaleString()}, Improvements: $${history.improvement_value.toLocaleString()})\n`;
+              }
+            }
+          } else {
+            response += "I couldn't find detailed property information. Would you like me to analyze this property using estimated values instead?";
+          }
+        } else {
+          response = "I couldn't find property details for that address. Please check the address and try again, or let me analyze this property using estimated values.";
+        }
+      } catch (error) {
+        console.error("Error getting property details:", error);
+        response = "I encountered an error while retrieving property details. Let me analyze this property using estimated values instead.";
+      }
+    } else {
+      response = "To get detailed property information, please add your Estated API key in the settings. For now, I'll use estimated values.";
+      
+      const mockProperty = mockDataService.getPropertyDetails(address, city, state, zipCode);
+      
+      response += `\n\n**Estimated Property Details**\n\n`;
+      response += `🏠 **Property Characteristics** (estimated)\n`;
+      response += `• Year Built: ${mockProperty.yearBuilt}\n`;
+      response += `• Bedrooms: ${mockProperty.beds}\n`;
+      response += `• Bathrooms: ${mockProperty.baths}\n`;
+      response += `• Square Footage: ${mockProperty.sqft.toLocaleString()} sq ft\n\n`;
+      
+      response += `💰 **Estimated Valuation**\n`;
+      response += `• Value: $${mockProperty.value.toLocaleString()}\n`;
+      response += `• Price per Sq Ft: $${Math.round(mockProperty.value / mockProperty.sqft).toLocaleString()}\n`;
+    }
+    
+    return response;
+  }
+  
+  else if (lowerMessage.includes("walk score") || 
+           lowerMessage.includes("walkability") || 
+           lowerMessage.includes("transit score") || 
+           lowerMessage.includes("bike score")) {
+    
+    const addressMatch = message.match(/for\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const cityMatch = message.match(/in\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const stateMatch = message.match(/([A-Z]{2})(?:\s+\d{5}|\s*$|,)/);
+    const zipMatch = message.match(/(\d{5})/);
+    
+    const address = addressMatch ? addressMatch[1].trim() : (chatContext.property ? chatContext.property.address : "123 Main St");
+    const city = cityMatch ? cityMatch[1].trim() : (chatContext.property ? chatContext.property.city : "Austin");
+    const state = stateMatch ? stateMatch[1].trim() : (chatContext.property ? chatContext.property.state : "TX");
+    const zipCode = zipMatch ? zipMatch[1].trim() : (chatContext.property ? chatContext.property.zipCode : "78701");
+    
+    response = `Checking walkability scores for ${address}, ${city}, ${state} ${zipCode}...\n\n`;
+    
+    let latitude = 30.2672;
+    let longitude = -97.7431;
+    
+    if (chatContext.property?.latitude && chatContext.property?.longitude) {
+      latitude = chatContext.property.latitude;
+      longitude = chatContext.property.longitude;
+    }
+    
+    if (apiKeys.walkScore) {
+      try {
+        const walkScoreData = await walkScoreService.getWalkScore(
+          latitude, 
+          longitude, 
+          `${address}, ${city}, ${state} ${zipCode}`,
+          apiKeys.walkScore
+        );
+        
+        if (walkScoreData) {
+          response = `**Walkability Report for ${address}, ${city}, ${state}**\n\n`;
+          
+          response += `👟 **Walk Score**: ${walkScoreData.walkScore}/100 - ${walkScoreData.walkScoreDescription}\n`;
+          
+          if (walkScoreData.transitScore) {
+            response += `🚌 **Transit Score**: ${walkScoreData.transitScore}/100 - ${walkScoreData.transitScoreDescription}\n`;
+          }
+          
+          if (walkScoreData.bikeScore) {
+            response += `🚲 **Bike Score**: ${walkScoreData.bikeScore}/100 - ${walkScoreData.bikeScoreDescription}\n`;
+          }
+          
+          response += `\n`;
+          
+          if (walkScoreData.walkScore >= 90) {
+            response += "This is a walker's paradise where daily errands do not require a car. This feature can make the property more attractive to tenants who don't want to drive.";
+          } else if (walkScoreData.walkScore >= 70) {
+            response += "This is a very walkable location where most errands can be accomplished on foot. Properties in walkable areas often command higher rents and appreciation.";
+          } else if (walkScoreData.walkScore >= 50) {
+            response += "This location is somewhat walkable, and some errands can be accomplished on foot. Consider the target tenant demographic when evaluating this feature.";
+          } else {
+            response += "This location is car-dependent, and most errands require driving. This may reduce appeal to tenants looking for walkable neighborhoods.";
+          }
+        } else {
+          response = "I couldn't retrieve Walk Score data for that location. Would you like me to try a different address?";
+        }
+      } catch (error) {
+        console.error("Error getting Walk Score:", error);
+        response = "I encountered an error while retrieving Walk Score data. Let me use estimated walkability information instead.";
+      }
+    } else {
+      response = "To get accurate walkability scores, please add your Walk Score API key in the settings. For now, I'll use estimated values.\n\n";
+      
+      const mockWalkScore = {
+        walkScore: Math.floor(Math.random() * 30) + 60,
+        transitScore: Math.floor(Math.random() * 40) + 40,
+        bikeScore: Math.floor(Math.random() * 30) + 50
+      };
+      
+      response += `**Estimated Walkability Report for ${address}, ${city}, ${state}**\n\n`;
+      response += `👟 **Walk Score**: ${mockWalkScore.walkScore}/100`;
+      
+      if (mockWalkScore.walkScore >= 90) {
+        response += " - Walker's Paradise (Daily errands do not require a car)\n";
+      } else if (mockWalkScore.walkScore >= 70) {
+        response += " - Very Walkable (Most errands can be accomplished on foot)\n";
+      } else if (mockWalkScore.walkScore >= 50) {
+        response += " - Somewhat Walkable (Some errands can be accomplished on foot)\n";
+      } else {
+        response += " - Car-Dependent (Most errands require a car)\n";
+      }
+      
+      response += `🚌 **Transit Score**: ${mockWalkScore.transitScore}/100`;
+      
+      if (mockWalkScore.transitScore >= 90) {
+        response += " - Rider's Paradise (World-class public transportation)\n";
+      } else if (mockWalkScore.transitScore >= 70) {
+        response += " - Excellent Transit (Transit is convenient for most trips)\n";
+      } else if (mockWalkScore.transitScore >= 50) {
+        response += " - Good Transit (Many public transportation options)\n";
+      } else {
+        response += " - Some Transit (A few public transportation options)\n";
+      }
+      
+      response += `🚲 **Bike Score**: ${mockWalkScore.bikeScore}/100`;
+      
+      if (mockWalkScore.bikeScore >= 90) {
+        response += " - Biker's Paradise (Flat as a pancake, excellent bike lanes)\n";
+      } else if (mockWalkScore.bikeScore >= 70) {
+        response += " - Very Bikeable (Biking is convenient for most trips)\n";
+      } else if (mockWalkScore.bikeScore >= 50) {
+        response += " - Bikeable (Some bike infrastructure)\n";
+      } else {
+        response += " - Somewhat Bikeable (Minimal bike infrastructure)\n";
+      }
+    }
+    
+    return response;
+  }
+  
+  else if (lowerMessage.includes("nearby") || 
+           lowerMessage.includes("amenities") || 
+           lowerMessage.includes("places") ||
+           lowerMessage.includes("schools") ||
+           lowerMessage.includes("restaurants")) {
+    
+    const addressMatch = message.match(/near\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const cityMatch = message.match(/in\s+([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const stateMatch = message.match(/([A-Z]{2})(?:\s+\d{5}|\s*$|,)/);
+    const zipMatch = message.match(/(\d{5})/);
+    
+    const address = addressMatch ? addressMatch[1].trim() : (chatContext.property ? chatContext.property.address : "123 Main St");
+    const city = cityMatch ? cityMatch[1].trim() : (chatContext.property ? chatContext.property.city : "Austin");
+    const state = stateMatch ? stateMatch[1].trim() : (chatContext.property ? chatContext.property.state : "TX");
+    const zipCode = zipMatch ? zipMatch[1].trim() : (chatContext.property ? chatContext.property.zipCode : "78701");
+    
+    response = `Searching for amenities near ${address}, ${city}, ${state} ${zipCode}...\n\n`;
+    
+    let latitude = 30.2672;
+    let longitude = -97.7431;
+    
+    if (chatContext.property?.latitude && chatContext.property?.longitude) {
+      latitude = chatContext.property.latitude;
+      longitude = chatContext.property.longitude;
+    }
+    
+    if (apiKeys.googleMaps) {
+      try {
+        const nearbyPlaces = await googlePlacesService.getNearbyPlaces(
+          latitude, 
+          longitude, 
+          apiKeys.googleMaps
+        );
+        
+        if (nearbyPlaces) {
+          response = `**Nearby Places Around ${address}, ${city}, ${state}**\n\n`;
+          
+          if (nearbyPlaces.schools.length > 0) {
+            response += `🏫 **Schools**\n`;
+            for (const school of nearbyPlaces.schools.slice(0, 3)) {
+              response += `• ${school.name} (${school.vicinity})${school.rating ? ` - Rating: ${school.rating}/5` : ''}\n`;
+            }
+            response += '\n';
+          }
+          
+          if (nearbyPlaces.restaurants.length > 0) {
+            response += `🍽️ **Restaurants & Cafes**\n`;
+            for (const restaurant of nearbyPlaces.restaurants.slice(0, 3)) {
+              response += `• ${restaurant.name} (${restaurant.vicinity})${restaurant.rating ? ` - Rating: ${restaurant.rating}/5` : ''}\n`;
+            }
+            response += '\n';
+          }
+          
+          if (nearbyPlaces.shopping.length > 0) {
+            response += `🛒 **Shopping**\n`;
+            for (const shop of nearbyPlaces.shopping.slice(0, 3)) {
+              response += `• ${shop.name} (${shop.vicinity})\n`;
+            }
+            response += '\n';
+          }
+          
+          if (nearbyPlaces.healthcare.length > 0) {
+            response += `🏥 **Healthcare**\n`;
+            for (const healthcare of nearbyPlaces.healthcare.slice(0, 2)) {
+              response += `• ${healthcare.name} (${healthcare.vicinity})\n`;
+            }
+            response += '\n';
+          }
+          
+          if (nearbyPlaces.parks.length > 0) {
+            response += `🌳 **Parks & Recreation**\n`;
+            for (const park of nearbyPlaces.parks.slice(0, 2)) {
+              response += `• ${park.name} (${park.vicinity})\n`;
+            }
+            response += '\n';
+          }
+          
+          if (nearbyPlaces.transportation.length > 0) {
+            response += `🚆 **Transportation**\n`;
+            for (const transport of nearbyPlaces.transportation.slice(0, 2)) {
+              response += `• ${transport.name} (${transport.vicinity})\n`;
+            }
+            response += '\n';
+          }
+          
+          response += `This neighborhood offers a good mix of amenities that can impact property value and rental desirability. Proximity to schools, shopping, and parks are particularly valuable features for family renters.`;
+        } else {
+          response = "I couldn't find any nearby places information for that location. Would you like to try a different address?";
+        }
+      } catch (error) {
+        console.error("Error getting nearby places:", error);
+        response = "I encountered an error while retrieving nearby places data. Let me use some general neighborhood information instead.";
+      }
+    } else {
+      response = "To get accurate nearby places information, please add your Google Places API key in the settings. For now, I'll provide some general neighborhood information.\n\n";
+      
+      response += `**Estimated Nearby Places Around ${address}, ${city}, ${state}**\n\n`;
+      
+      response += `🏫 **Schools**\n`;
+      response += `• ${city} Elementary School (0.5 miles away)\n`;
+      response += `• ${city} Middle School (1.2 miles away)\n`;
+      response += `• ${city} High School (1.8 miles away)\n\n`;
+      
+      response += `🍽️ **Restaurants & Cafes**\n`;
+      response += `• Local Coffee Shop (0.3 miles away)\n`;
+      response += `• Family Restaurant (0.7 miles away)\n`;
+      response += `• Fast Casual Dining (0.9 miles away)\n\n`;
+      
+      response += `🛒 **Shopping**\n`;
+      response += `• Neighborhood Grocery (0.4 miles away)\n`;
+      response += `• Retail Center (1.1 miles away)\n`;
+      response += `• Shopping Mall (3.2 miles away)\n\n`;
+      
+      response += `Note: This is estimated information. For actual nearby places data, please add your Google Places API key.`;
+    }
+    
+    return response;
+  }
+  
+  else if (lowerMessage.includes("compare")) {
+    if (chatContext.comparisonProperties.length < 2 && !chatContext.property) {
+      response = "I need at least two properties to compare. Would you like me to create some sample properties for comparison?";
+    } else {
+      const propertiesForComparison = [
+        ...(chatContext.property ? [chatContext.property] : []),
+        ...chatContext.comparisonProperties
+      ];
+      
+      if (propertiesForComparison.length < 2) {
+        response = "I need at least two properties to make a comparison. Would you like me to add another sample property?";
+      } else {
+        response = "Here's a comparison of your properties:\n\n";
+        
+        const propertyAnalyses = propertiesForComparison.map(prop => ({
+          property: prop,
+          analysis: mockDataService.calculatePropertyAnalysis(prop)
+        }));
+        
+        response += "| Property | Purchase Price | Monthly Rent | Cash Flow | Cap Rate | ROI |\n";
+        response += "|----------|---------------|--------------|-----------|----------|-----|\n";
+        
+        propertyAnalyses.forEach(({ property, analysis }) => {
+          response += `| ${property.address.substring(0, 15)}... | $${property.purchasePrice.toLocaleString()} | $${property.monthlyRent.toLocaleString()} | $${analysis.cashFlow.monthly.toLocaleString()} | ${analysis.capRate}% | ${analysis.returnOnInvestment}% |\n`;
+        });
+        
+        const bestCashFlow = propertyAnalyses.reduce((prev, current) => 
+          prev.analysis.cashFlow.monthly > current.analysis.cashFlow.monthly ? prev : current
+        );
+        
+        const bestROI = propertyAnalyses.reduce((prev, current) => 
+          prev.analysis.returnOnInvestment > current.analysis.returnOnInvestment ? prev : current
+        );
+        
+        response += "\n**Analysis Summary**:\n";
+        response += `• Best Cash Flow: ${bestCashFlow.property.address} at $${bestCashFlow.analysis.cashFlow.monthly.toLocaleString()}/month\n`;
+        response += `• Best ROI: ${bestROI.property.address} at ${bestROI.analysis.returnOnInvestment}%\n\n`;
+        
+        if (bestCashFlow.property.id === bestROI.property.id) {
+          response += `Overall, ${bestCashFlow.property.address} appears to be the strongest investment opportunity based on both cash flow and ROI.`;
+        } else {
+          response += `You have a trade-off decision: ${bestCashFlow.property.address} offers better cash flow, while ${bestROI.property.address} offers better long-term ROI.`;
+        }
+      }
+      
+      if (apiKeys.walkScore) {
+        response += "\n\n**Walkability Comparison**\n\n";
+        response += "I can also compare walkability scores for these properties. Would you like me to do that?";
+      }
+    }
+    
+    return response;
+  }
+  
+  else if (lowerMessage.includes("set property") || 
+           lowerMessage.includes("add property") || 
+           lowerMessage.includes("new property")) {
+    const priceMatch = message.match(/price(?:[\s:]+)?\$?([\d,]+)/i);
+    const rentMatch = message.match(/rent(?:[\s:]+)?\$?([\d,]+)/i);
+    const addressMatch = message.match(/address(?:[\s:]+)?(.+?)(?:,|\sin|$)/i);
+    const cityMatch = message.match(/(?:in|,)\s*([^,]+)(?:,|\s+[A-Z]{2})/i);
+    const stateMatch = message.match(/([A-Z]{2})(?:\s+\d{5}|\s*$|,)/);
+    const zipMatch = message.match(/(\d{5})/);
+    
+    const newProperty: PropertyData = {
+      id: Date.now().toString(),
+      address: addressMatch ? addressMatch[1].trim() : "123 Sample St",
+      city: cityMatch ? cityMatch[1].trim() : "Austin",
+      state: stateMatch ? stateMatch[1].trim() : "TX",
+      zipCode: zipMatch ? zipMatch[1].trim() : "78701",
+      purchasePrice: priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000,
+      monthlyRent: rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200,
+      annualExpenses: {
+        propertyTax: Math.round(0.012 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+        insurance: Math.round(0.005 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+        maintenance: Math.round(0.005 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+        propertyManagement: Math.round(0.1 * 12 * (rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200)),
+        vacancy: Math.round(0.05 * 12 * (rentMatch ? parseInt(rentMatch[1].replace(/,/g, "")) : 2200)),
+        other: 500
+      },
+      downPayment: Math.round(0.2 * (priceMatch ? parseInt(priceMatch[1].replace(/,/g, "")) : 350000)),
+      interestRate: 5.5,
+      loanTerm: 30
+    };
+    
+    const analysis = mockDataService.calculatePropertyAnalysis(newProperty);
+    
+    setChatContext({
+      ...chatContext,
+      property: newProperty,
+      analysis
+    });
+    
+    response = `Great! I've set up a property at ${newProperty.address}, ${newProperty.city}, ${newProperty.state} ${newProperty.zipCode} with:\n\n`;
+    response += `• Purchase Price: $${newProperty.purchasePrice.toLocaleString()}\n`;
+    response += `• Monthly Rent: $${newProperty.monthlyRent.toLocaleString()}\n`;
+    response += `• Down Payment: $${newProperty.downPayment.toLocaleString()} (${Math.round((newProperty.downPayment / newProperty.purchasePrice) * 100)}%)\n`;
+    response += `• Loan Terms: ${newProperty.loanTerm} years at ${newProperty.interestRate}% interest\n\n`;
+    
+    response += "Would you like me to analyze this property, show market trends, or provide neighborhood insights?";
+  }
+  
+  else if (lowerMessage.includes("add comparison") || 
+           lowerMessage.includes("add to comparison") || 
+           lowerMessage.includes("compare with")) {
+    const baseProperty = chatContext.property || defaultPropertyData;
+    
+    const compProperty: PropertyData = {
+      ...baseProperty,
+      id: Date.now().toString(),
+      address: baseProperty.address.replace(/\d+/, (match) => String(Number(match) + 100)),
+      purchasePrice: Math.round(baseProperty.purchasePrice * (1 + (Math.random() * 0.2 - 0.1))),
+      monthlyRent: Math.round(baseProperty.monthlyRent * (1 + (Math.random() * 0.2 - 0.1))),
+      downPayment: Math.round(baseProperty.downPayment * (1 + (Math.random() * 0.2 - 0.1)))
+    };
+    
+    setChatContext({
+      ...chatContext,
+      comparisonProperties: [...chatContext.comparisonProperties, compProperty]
+    });
+    
+    response = `I've added a comparison property at ${compProperty.address} with:\n\n`;
+    response += `• Purchase Price: $${compProperty.purchasePrice.toLocaleString()}\n`;
+    response += `• Monthly Rent: $${compProperty.monthlyRent.toLocaleString()}\n`;
+    response += `• Down Payment: $${compProperty.downPayment.toLocaleString()}\n\n`;
+    
+    response += "You can now use the 'compare properties' command to see a side-by-side comparison.";
+  }
+  
   else if (lowerMessage.includes("hello") || 
            lowerMessage.includes("hi") || 
            lowerMessage.includes("hey") || 
@@ -388,9 +893,11 @@ export const processMessage = async (
     response += "• **Show market trends** - I'll provide data on price trends, rent growth, and market conditions\n";
     response += "• **Neighborhood insights** - I'll share information about schools, safety, walkability, and demographics\n";
     response += "• **Compare properties** - I can help you compare multiple investment opportunities\n";
-    response += "• **Generate a report** - I can create a downloadable PDF report of the analysis\n\n";
+    response += "• **Property history** - I can look up property details and ownership history\n";
+    response += "• **Walkability scores** - I can check walkability, transit, and bike scores\n";
+    response += "• **Nearby amenities** - I can find schools, restaurants, and other points of interest\n\n";
     
-    response += "To get started, try saying something like 'analyze property' or 'set property at 123 Main St, Austin, TX with price $350,000 and rent $2,200'.";
+    response += "To get started, try saying something like 'analyze property' or 'show me walkability scores for 123 Main St, Austin, TX'.";
   }
   
   else {
@@ -398,10 +905,13 @@ export const processMessage = async (
     response += "• Analyze a property\n";
     response += "• Show market trends\n";
     response += "• Provide neighborhood insights\n";
+    response += "• Check walkability scores\n";
+    response += "• Find nearby amenities\n";
+    response += "• Look up property history\n";
     response += "• Compare properties\n";
     response += "• Set up a new property\n\n";
     
-    response += "For example, try saying 'analyze property' or 'show market trends'.";
+    response += "For example, try saying 'analyze property' or 'show walkability score for 123 Main St, Austin TX'.";
   }
   
   return response;
@@ -541,3 +1051,10 @@ const formatPropertyAnalysis = (analysis: PropertyAnalysis): string => {
   
   return result;
 };
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}

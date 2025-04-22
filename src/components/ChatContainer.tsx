@@ -8,6 +8,7 @@ import { processMessage, ChatContextType } from "@/utils/chatLogic";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare } from "lucide-react";
+import { getAllApiKeys } from "@/utils/apiUtils";
 
 const ChatContainer = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([
@@ -40,10 +41,21 @@ const ChatContainer = () => {
         ),
       }));
     },
+    apiKeys: getAllApiKeys()
   });
   
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Check for API keys on component mount
+  useEffect(() => {
+    // Update the API keys in the context whenever they change in localStorage
+    const apiKeys = getAllApiKeys();
+    setChatContext(prev => ({
+      ...prev,
+      apiKeys
+    }));
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -80,10 +92,16 @@ const ChatContainer = () => {
     setIsProcessing(true);
     
     try {
+      // Update API keys in context before processing
+      const updatedChatContext = {
+        ...chatContext,
+        apiKeys: getAllApiKeys()
+      };
+      
       // Process the message
       const response = await processMessage(
         content,
-        chatContext,
+        updatedChatContext,
         setChatContext
       );
       
@@ -134,7 +152,7 @@ const ChatContainer = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="pb-3 text-sm text-muted-foreground">
-          Ask me about property analysis, market trends, or investment opportunities.
+          Ask me about property analysis, market trends, walkability scores, or nearby amenities.
         </CardContent>
       </Card>
       

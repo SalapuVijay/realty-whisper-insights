@@ -30,7 +30,9 @@ const SAMPLE_QUESTIONS = [
   "Analyze a property at 123 Main St, San Francisco, CA 94105",
   "What's the walkability score for Downtown Chicago?",
   "Compare property values in Seattle vs Portland",
-  "Show me a map of investment opportunities in Phoenix"
+  "Show me a map of investment opportunities in Phoenix",
+  "Tell me about amenities near 456 Oak St, Boston, MA",
+  "What is the property history for 789 Pine Ave, Denver, CO?"
 ];
 
 const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
@@ -42,6 +44,8 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState(localStorage.getItem("google_maps_api_key") || "");
   const [walkScoreApiKey, setWalkScoreApiKey] = useState(localStorage.getItem("walkscore_api_key") || "");
   const [dialogflowApiKey, setDialogflowApiKey] = useState(localStorage.getItem("dialogflow_api_key") || "");
+  const [huggingfaceApiKey, setHuggingfaceApiKey] = useState(localStorage.getItem("huggingface_api_key") || "");
+  const [estatedApiKey, setEstatedApiKey] = useState(localStorage.getItem("estated_api_key") || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +67,8 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
     localStorage.setItem("google_maps_api_key", googleMapsApiKey);
     localStorage.setItem("walkscore_api_key", walkScoreApiKey);
     localStorage.setItem("dialogflow_api_key", dialogflowApiKey);
+    localStorage.setItem("huggingface_api_key", huggingfaceApiKey);
+    localStorage.setItem("estated_api_key", estatedApiKey);
     
     setIsApiDialogOpen(false);
     toast("API keys saved successfully", {
@@ -150,6 +156,18 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
                       className="col-span-3"
                     />
                   </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="estated" className="text-right">
+                      Estated
+                    </Label>
+                    <Input
+                      id="estated"
+                      type="password"
+                      value={estatedApiKey}
+                      onChange={(e) => setEstatedApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="additional-apis" className="space-y-4">
@@ -186,6 +204,18 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
                       type="password"
                       value={dialogflowApiKey}
                       onChange={(e) => setDialogflowApiKey(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="huggingface" className="text-right">
+                      HuggingFace
+                    </Label>
+                    <Input
+                      id="huggingface"
+                      type="password"
+                      value={huggingfaceApiKey}
+                      onChange={(e) => setHuggingfaceApiKey(e.target.value)}
                       className="col-span-3"
                     />
                   </div>

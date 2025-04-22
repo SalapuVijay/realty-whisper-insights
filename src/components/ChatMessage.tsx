@@ -3,7 +3,7 @@ import React from 'react';
 import { ChatMessage as ChatMessageType } from "@/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { Bot, User, Loader2, Clock } from "lucide-react";
+import { Bot, User, Loader2, Clock, MapPin, Building, Database, Map } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -25,6 +25,20 @@ interface CodeProps {
 const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.role === "user";
   const timestamp = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  
+  // Detect if the message contains property data or a special visualization
+  const hasPropertyData = message.content.includes("**Property") && 
+                        (message.content.includes("Purchase Price") || 
+                         message.content.includes("Monthly Rent"));
+  
+  const hasWalkScore = message.content.includes("**Walk Score**") || 
+                       message.content.includes("walkability score");
+  
+  const hasNearbyPlaces = message.content.includes("**Nearby Places**") || 
+                         message.content.includes("amenities near");
+  
+  const hasPropertyHistory = message.content.includes("**Property History**") || 
+                            message.content.includes("ownership history");
   
   return (
     <div
@@ -68,6 +82,43 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           </div>
         ) : (
           <div className="space-y-1">
+            {/* Special data visualizations */}
+            {!isUser && hasPropertyData && (
+              <div className="mb-2 p-1 bg-realty-50/50 rounded-md border border-realty-100">
+                <div className="flex items-center gap-1 text-xs font-medium text-realty-700 mb-1 px-2 pt-1">
+                  <Building className="h-3 w-3" />
+                  <span>Property Data</span>
+                </div>
+              </div>
+            )}
+            
+            {!isUser && hasWalkScore && (
+              <div className="mb-2 p-1 bg-realty-50/50 rounded-md border border-realty-100">
+                <div className="flex items-center gap-1 text-xs font-medium text-realty-700 mb-1 px-2 pt-1">
+                  <MapPin className="h-3 w-3" />
+                  <span>Walkability Report</span>
+                </div>
+              </div>
+            )}
+            
+            {!isUser && hasNearbyPlaces && (
+              <div className="mb-2 p-1 bg-realty-50/50 rounded-md border border-realty-100">
+                <div className="flex items-center gap-1 text-xs font-medium text-realty-700 mb-1 px-2 pt-1">
+                  <Map className="h-3 w-3" />
+                  <span>Nearby Amenities</span>
+                </div>
+              </div>
+            )}
+            
+            {!isUser && hasPropertyHistory && (
+              <div className="mb-2 p-1 bg-realty-50/50 rounded-md border border-realty-100">
+                <div className="flex items-center gap-1 text-xs font-medium text-realty-700 mb-1 px-2 pt-1">
+                  <Database className="h-3 w-3" />
+                  <span>Property History</span>
+                </div>
+              </div>
+            )}
+            
             <ReactMarkdown
               // Use type assertion to resolve plugin type issues
               remarkPlugins={[remarkGfm as any]}
