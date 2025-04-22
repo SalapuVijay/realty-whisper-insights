@@ -502,7 +502,13 @@ export const processMessage = async (
     } else {
       response = "To get detailed property information, please add your Estated API key in the settings. For now, I'll use estimated values.";
       
-      const mockProperty = mockDataService.getPropertyDetails(address, city, state, zipCode);
+      const mockProperty = {
+        yearBuilt: 2005,
+        beds: 3,
+        baths: 2,
+        sqft: 1800,
+        value: 420000
+      };
       
       response += `\n\n**Estimated Property Details**\n\n`;
       response += `🏠 **Property Characteristics** (estimated)\n`;
