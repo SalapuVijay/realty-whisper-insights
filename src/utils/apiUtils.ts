@@ -1,4 +1,3 @@
-
 /**
  * Utility functions to manage API keys and services
  */
@@ -76,4 +75,17 @@ export const getAllApiKeys = () => {
     huggingface: localStorage.getItem("huggingface_api_key"),
     estated: localStorage.getItem("estated_api_key")
   };
+};
+
+export const saveGoogleMapsApiKey = (apiKey: string) => {
+  // Basic validation to ensure it looks like a Google Maps API key
+  const googleMapsApiKeyRegex = /^AIza[A-Za-z0-9_-]{35}$/;
+  
+  if (googleMapsApiKeyRegex.test(apiKey)) {
+    localStorage.setItem("google_maps_api_key", apiKey);
+    return true;
+  } else {
+    console.error("Invalid Google Maps API key format");
+    return false;
+  }
 };
