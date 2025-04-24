@@ -1,98 +1,109 @@
 
-export interface NearbyPlace {
+interface NearbyPlace {
   name: string;
   type: string;
-  vicinity: string;
   rating?: number;
-  user_ratings_total?: number;
+  vicinity: string;
   distance?: number;
-}
-
-export interface NearbyPlaces {
-  schools: NearbyPlace[];
-  restaurants: NearbyPlace[];
-  shopping: NearbyPlace[];
-  healthcare: NearbyPlace[];
-  parks: NearbyPlace[];
-  transportation: NearbyPlace[];
 }
 
 export const getNearbyPlaces = async (
   latitude: number,
   longitude: number,
+  type: string,
+  radius: number = 1000,
   apiKey: string | null
-): Promise<NearbyPlaces | null> => {
+): Promise<NearbyPlace[]> => {
   if (!apiKey) {
     console.warn("Google Places API key not provided");
-    return null;
+    return [];
   }
-
-  const placeTypes = {
-    schools: ["school", "university"],
-    restaurants: ["restaurant", "cafe", "bar"],
-    shopping: ["shopping_mall", "store", "supermarket"],
-    healthcare: ["hospital", "doctor", "pharmacy"],
-    parks: ["park", "playground"],
-    transportation: ["bus_station", "subway_station", "train_station"]
-  };
-
-  const results: NearbyPlaces = {
-    schools: [],
-    restaurants: [],
-    shopping: [],
-    healthcare: [],
-    parks: [],
-    transportation: []
-  };
 
   try {
-    // Make parallel requests for each place type
-    const promises = Object.entries(placeTypes).map(async ([category, types]) => {
-      const placesForCategory = [];
-      
-      // We might need to make multiple requests for different types in each category
-      for (const type of types) {
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=1500&type=${type}&key=${apiKey}`,
-          {
-            method: "GET",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Google Places API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-          throw new Error(`Google Places API returned status: ${data.status}`);
-        }
-        
-        // Process the results
-        const places = data.results || [];
-        for (const place of places) {
-          placesForCategory.push({
-            name: place.name,
-            type: type,
-            vicinity: place.vicinity,
-            rating: place.rating,
-            user_ratings_total: place.user_ratings_total
-          });
-        }
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${apiKey}`,
+      {
+        method: "GET",
       }
-      
-      // Sort by rating (if available)
-      placesForCategory.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      
-      // Take top 5 results
-      results[category as keyof NearbyPlaces] = placesForCategory.slice(0, 5);
-    });
+    );
 
-    await Promise.all(promises);
-    return results;
+    if (!response.ok) {
+      throw new Error(`Google Places API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+      throw new Error(`Google Places API returned status: ${data.status}`);
+    }
+
+    return (data.results || []).map((place: any) => ({
+      name: place.name,
+      type: place.types[0],
+      rating: place.rating,
+      vicinity: place.vicinity,
+      distance: calculateDistance(
+        latitude,
+        longitude,
+        place.geometry.location.lat,
+        place.geometry.location.lng
+      ),
+    }));
   } catch (error) {
     console.error("Error calling Google Places API:", error);
-    return null;
+    return [];
   }
+};
+
+/**
+ * Formats nearby places data into a markdown string for chat display
+ */
+export const formatNearbyPlacesForChat = (places: NearbyPlace[]): string => {
+  if (places.length === 0) {
+    return "No nearby places found.";
+  }
+
+  let result = `## Nearby Places\n\n`;
+  
+  const groupedPlaces = places.reduce((acc: { [key: string]: NearbyPlace[] }, place) => {
+    if (!acc[place.type]) {
+      acc[place.type] = [];
+    }
+    acc[place.type].push(place);
+    return acc;
+  }, {});
+
+  Object.entries(groupedPlaces).forEach(([type, places]) => {
+    result += `### ${capitalizeFirstLetter(type.replace('_', ' '))}\n`;
+    places.forEach(place => {
+      result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
+      if (place.rating) {
+        result += ` - Rating: ${place.rating}/5`;
+      }
+      result += `\n  ${place.vicinity}\n`;
+    });
+    result += '\n';
+  });
+
+  return result;
+};
+
+// Helper functions
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const toRad = (value: number): number => {
+  return (value * Math.PI) / 180;
+};
+
+const capitalizeFirstLetter = (string: string): string => {
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 };
