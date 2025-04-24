@@ -670,8 +670,10 @@ export const processMessage = async (
       try {
         const nearbyPlaces = await googlePlacesService.getNearbyPlaces(
           latitude, 
-          longitude, 
-          apiKeys.googleMaps
+          longitude,
+          apiKeys.googleMaps,
+          1000,
+          ["school", "restaurant", "store", "hospital", "park", "transit_station"]
         );
         
         if (nearbyPlaces) {

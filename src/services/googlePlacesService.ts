@@ -7,75 +7,127 @@ interface NearbyPlace {
   distance?: number;
 }
 
+interface CategorizedPlaces {
+  schools: NearbyPlace[];
+  restaurants: NearbyPlace[];
+  shopping: NearbyPlace[];
+  healthcare: NearbyPlace[];
+  parks: NearbyPlace[];
+  transportation: NearbyPlace[];
+  other: NearbyPlace[];
+}
+
 export const getNearbyPlaces = async (
   latitude: number,
   longitude: number,
-  type: string,
+  apiKey: string | null,
   radius: number = 1000,
-  apiKey: string | null
-): Promise<NearbyPlace[]> => {
+  types: string[] = ["school", "restaurant", "store", "hospital", "park", "transit_station"]
+): Promise<CategorizedPlaces> => {
   if (!apiKey) {
     console.warn("Google Places API key not provided");
-    return [];
+    return {
+      schools: [],
+      restaurants: [],
+      shopping: [],
+      healthcare: [],
+      parks: [],
+      transportation: [],
+      other: []
+    };
   }
 
+  const result: CategorizedPlaces = {
+    schools: [],
+    restaurants: [],
+    shopping: [],
+    healthcare: [],
+    parks: [],
+    transportation: [],
+    other: []
+  };
+
   try {
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${apiKey}`,
-      {
-        method: "GET",
+    // Get results for each place type
+    for (const type of types) {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${apiKey}`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Google Places API error: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Google Places API error: ${response.status}`);
+      const data = await response.json();
+      
+      if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+        throw new Error(`Google Places API returned status: ${data.status}`);
+      }
+
+      const places = (data.results || []).map((place: any) => ({
+        name: place.name,
+        type: place.types[0],
+        rating: place.rating,
+        vicinity: place.vicinity,
+        distance: calculateDistance(
+          latitude,
+          longitude,
+          place.geometry.location.lat,
+          place.geometry.location.lng
+        ),
+      }));
+
+      // Categorize the places based on their type
+      places.forEach((place: NearbyPlace) => {
+        if (place.type === "school" || place.type === "university") {
+          result.schools.push(place);
+        } else if (place.type === "restaurant" || place.type === "cafe" || place.type === "bar") {
+          result.restaurants.push(place);
+        } else if (place.type === "store" || place.type === "shopping_mall" || place.type === "supermarket") {
+          result.shopping.push(place);
+        } else if (place.type === "hospital" || place.type === "doctor" || place.type === "pharmacy") {
+          result.healthcare.push(place);
+        } else if (place.type === "park" || place.type === "campground" || place.type === "natural_feature") {
+          result.parks.push(place);
+        } else if (place.type === "transit_station" || place.type === "bus_station" || place.type === "train_station" || place.type === "subway_station") {
+          result.transportation.push(place);
+        } else {
+          result.other.push(place);
+        }
+      });
     }
 
-    const data = await response.json();
-    
-    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-      throw new Error(`Google Places API returned status: ${data.status}`);
-    }
-
-    return (data.results || []).map((place: any) => ({
-      name: place.name,
-      type: place.types[0],
-      rating: place.rating,
-      vicinity: place.vicinity,
-      distance: calculateDistance(
-        latitude,
-        longitude,
-        place.geometry.location.lat,
-        place.geometry.location.lng
-      ),
-    }));
+    return result;
   } catch (error) {
     console.error("Error calling Google Places API:", error);
-    return [];
+    return {
+      schools: [],
+      restaurants: [],
+      shopping: [],
+      healthcare: [],
+      parks: [],
+      transportation: [],
+      other: []
+    };
   }
 };
 
 /**
  * Formats nearby places data into a markdown string for chat display
  */
-export const formatNearbyPlacesForChat = (places: NearbyPlace[]): string => {
-  if (places.length === 0) {
+export const formatNearbyPlacesForChat = (places: CategorizedPlaces): string => {
+  if (Object.values(places).every(group => group.length === 0)) {
     return "No nearby places found.";
   }
 
   let result = `## Nearby Places\n\n`;
   
-  const groupedPlaces = places.reduce((acc: { [key: string]: NearbyPlace[] }, place) => {
-    if (!acc[place.type]) {
-      acc[place.type] = [];
-    }
-    acc[place.type].push(place);
-    return acc;
-  }, {});
-
-  Object.entries(groupedPlaces).forEach(([type, places]) => {
-    result += `### ${capitalizeFirstLetter(type.replace('_', ' '))}\n`;
-    places.forEach(place => {
+  if (places.schools.length > 0) {
+    result += `### Schools\n`;
+    places.schools.forEach(place => {
       result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
       if (place.rating) {
         result += ` - Rating: ${place.rating}/5`;
@@ -83,7 +135,67 @@ export const formatNearbyPlacesForChat = (places: NearbyPlace[]): string => {
       result += `\n  ${place.vicinity}\n`;
     });
     result += '\n';
-  });
+  }
+  
+  if (places.restaurants.length > 0) {
+    result += `### Restaurants & Cafes\n`;
+    places.restaurants.forEach(place => {
+      result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
+      if (place.rating) {
+        result += ` - Rating: ${place.rating}/5`;
+      }
+      result += `\n  ${place.vicinity}\n`;
+    });
+    result += '\n';
+  }
+  
+  if (places.shopping.length > 0) {
+    result += `### Shopping\n`;
+    places.shopping.forEach(place => {
+      result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
+      if (place.rating) {
+        result += ` - Rating: ${place.rating}/5`;
+      }
+      result += `\n  ${place.vicinity}\n`;
+    });
+    result += '\n';
+  }
+  
+  if (places.healthcare.length > 0) {
+    result += `### Healthcare\n`;
+    places.healthcare.forEach(place => {
+      result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
+      if (place.rating) {
+        result += ` - Rating: ${place.rating}/5`;
+      }
+      result += `\n  ${place.vicinity}\n`;
+    });
+    result += '\n';
+  }
+  
+  if (places.parks.length > 0) {
+    result += `### Parks & Recreation\n`;
+    places.parks.forEach(place => {
+      result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
+      if (place.rating) {
+        result += ` - Rating: ${place.rating}/5`;
+      }
+      result += `\n  ${place.vicinity}\n`;
+    });
+    result += '\n';
+  }
+  
+  if (places.transportation.length > 0) {
+    result += `### Transportation\n`;
+    places.transportation.forEach(place => {
+      result += `- ${place.name} (${place.distance?.toFixed(1)} km)`;
+      if (place.rating) {
+        result += ` - Rating: ${place.rating}/5`;
+      }
+      result += `\n  ${place.vicinity}\n`;
+    });
+    result += '\n';
+  }
 
   return result;
 };
