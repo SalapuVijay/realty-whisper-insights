@@ -1,5 +1,5 @@
 
-import { ChatMessage, PropertyData, PropertyAnalysis } from "@/types";
+import { ChatMessage, PropertyData, PropertyAnalysis, NeighborhoodData } from "@/types";
 import { ChatContextType } from "./types";
 import { formatPropertyAnalysis, formatNeighborhoodData } from "./formatters";
 import { handleSetProperty, analyzeRealProperty } from "./propertyHandlers";
@@ -115,7 +115,85 @@ async function handlePropertySearch(
   }
 }
 
-// Add other helper functions here...
+async function handlePropertyAnalysis(
+  message: string, 
+  chatContext: ChatContextType, 
+  setChatContext: (context: ChatContextType) => void
+): Promise<string> {
+  const propertyIndexMatch = message.match(/analyze\s+property\s+(\d+)/i);
+  
+  if (!propertyIndexMatch || !propertyIndexMatch[1]) {
+    return "Please specify which property you'd like to analyze, e.g., 'analyze property 1'.";
+  }
+  
+  const propertyIndex = parseInt(propertyIndexMatch[1]) - 1;
+  const mockProperties = mockDataService.getProperties("Austin", "TX");
+  
+  if (propertyIndex < 0 || propertyIndex >= mockProperties.length) {
+    return `Please provide a valid property number between 1 and ${mockProperties.length}.`;
+  }
+  
+  const selectedProperty = mockProperties[propertyIndex];
+  const analysis = mockDataService.calculatePropertyAnalysis(selectedProperty);
+  
+  setChatContext({
+    ...chatContext,
+    property: selectedProperty,
+    analysis
+  });
+  
+  return `I've analyzed property #${propertyIndex + 1}:\n\n${formatPropertyAnalysis(analysis)}`;
+}
+
+function formatNewPropertyResponse(property: PropertyData): string {
+  return `✅ I've set up a new property for you:\n\n` +
+    `🏠 **Address**: ${property.address}, ${property.city}, ${property.state} ${property.zipCode}\n` +
+    `💰 **Purchase Price**: $${property.purchasePrice.toLocaleString()}\n` +
+    `💵 **Monthly Rent**: $${property.monthlyRent.toLocaleString()}\n` +
+    `💸 **Down Payment**: $${property.downPayment.toLocaleString()} (${Math.round((property.downPayment / property.purchasePrice) * 100)}%)\n` +
+    `📊 **Loan**: ${property.loanTerm}-year fixed at ${property.interestRate}% interest\n\n` +
+    `I can now analyze this property for you. Try asking me for:\n` +
+    `- Financial analysis\n` +
+    `- Cash flow breakdown\n` +
+    `- Return on investment\n` +
+    `- Neighborhood insights\n` +
+    `- Market trends`;
+}
+
+function formatSearchResults(
+  properties: PropertyData[],
+  chatContext: ChatContextType,
+  setChatContext: (context: ChatContextType) => void
+): string {
+  if (!properties || properties.length === 0) {
+    return "No properties found matching your search criteria. Try a different location or search terms.";
+  }
+
+  let response = `I found ${properties.length} properties in your selected area:\n\n`;
+  
+  properties.slice(0, 5).forEach((property, index) => {
+    const capRate = ((property.monthlyRent * 12) / property.purchasePrice * 100).toFixed(2);
+    
+    response += `**Property ${index + 1}**:\n`;
+    response += `🏠 ${property.address}, ${property.city}, ${property.state} ${property.zipCode}\n`;
+    response += `💰 Price: $${property.purchasePrice.toLocaleString()}\n`;
+    response += `💵 Rent: $${property.monthlyRent.toLocaleString()}/month\n`;
+    response += `📊 Cap Rate: ${capRate}%\n\n`;
+  });
+  
+  response += "You can ask me to analyze any of these properties in detail by saying 'analyze property 1' (or whichever number you're interested in).";
+  return response;
+}
+
+function formatMockSearchResults(
+  city: string,
+  state: string,
+  chatContext: ChatContextType,
+  setChatContext: (context: ChatContextType) => void
+): string {
+  const mockProperties = mockDataService.getProperties(city, state);
+  return formatSearchResults(mockProperties, chatContext, setChatContext);
+}
 
 function getDefaultResponse(): string {
   return "I'm sorry, I didn't quite understand that request. You can ask me to:\n\n" +
