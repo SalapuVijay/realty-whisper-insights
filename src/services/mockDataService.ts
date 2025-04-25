@@ -1,4 +1,3 @@
-
 import { MarketTrend, NeighborhoodData, PropertyAnalysis, PropertyData } from "@/types";
 
 const calculatePropertyAnalysis = (property: PropertyData): PropertyAnalysis => {
@@ -114,9 +113,61 @@ const getNeighborhoodData = (zipCode: string, city: string, state: string): Neig
   };
 };
 
+const getProperties = (city: string, state: string): PropertyData[] => {
+  // Generate a deterministic seed based on location
+  const seedValue = city.charCodeAt(0) + state.charCodeAt(0);
+  const random = (min: number, max: number, seed: number) => {
+    const rnd = ((seed * 9301 + 49297) % 233280) / 233280;
+    return min + rnd * (max - min);
+  };
+
+  // Generate 5 properties with location-based randomization
+  const properties: PropertyData[] = [];
+  
+  for (let i = 0; i < 5; i++) {
+    const seed = seedValue + (i * 100);
+    
+    // Generate property price based on location and property index
+    const price = Math.round(random(200000, 800000, seed) / 1000) * 1000;
+    
+    // Generate monthly rent (roughly 0.5%-1% of property value per month)
+    const rent = Math.round(price * random(0.005, 0.01, seed + 50));
+    
+    // Generate property address
+    const streets = ["Main St", "Oak Ave", "Maple Ln", "Cedar Rd", "Pine Dr"];
+    const houseNumber = Math.floor(random(100, 999, seed + 25));
+    
+    const property: PropertyData = {
+      id: `property-${city}-${i}`,
+      address: `${houseNumber} ${streets[i % streets.length]}`,
+      city,
+      state,
+      zipCode: `${Math.floor(random(10000, 99999, seed + 10))}`,
+      purchasePrice: price,
+      monthlyRent: rent,
+      annualExpenses: {
+        propertyTax: Math.round(price * 0.012), // ~1.2% property tax
+        insurance: Math.round(price * 0.005),   // ~0.5% insurance
+        maintenance: Math.round(price * 0.005), // ~0.5% maintenance
+        propertyManagement: Math.round(rent * 0.1 * 12), // 10% of rent
+        vacancy: Math.round(rent * 0.05 * 12),  // 5% vacancy rate
+        other: 500
+      },
+      downPayment: Math.round(price * 0.2),      // 20% down payment
+      interestRate: random(4, 6, seed + 5),      // 4-6% interest rate
+      loanTerm: 30
+    };
+    
+    properties.push(property);
+  }
+  
+  return properties;
+};
+
 // Export the mock data service functions
 export const mockDataService = {
   calculatePropertyAnalysis,
   getMarketTrends,
-  getNeighborhoodData
+  getNeighborhoodData,
+  getProperties
 };
