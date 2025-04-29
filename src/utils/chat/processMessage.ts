@@ -1,7 +1,6 @@
-
-import { ChatMessage, PropertyData, PropertyAnalysis, NeighborhoodData } from "@/types";
+import { ChatMessage, PropertyData } from "@/types";
 import { ChatContextType } from "./types";
-import { formatPropertyAnalysis, formatNeighborhoodData } from "./formatters";
+import { formatPropertyAnalysis } from "./formatters";
 import { handleSetProperty, analyzeRealProperty } from "./propertyHandlers";
 import { getMarketTrendResponse } from "./marketHandlers";
 import { mockDataService } from "@/services/mockDataService";
@@ -10,6 +9,21 @@ import * as walkScoreService from "@/services/walkScoreService";
 import * as estatedService from "@/services/estatedService";
 import * as googlePlacesService from "@/services/googlePlacesService";
 import * as dialogflowService from "@/services/dialogflowService";
+import * as huggingfaceService from "@/services/huggingfaceService";
+import { 
+  handlePropertySearch, 
+  formatSearchResults, 
+  formatMockSearchResults 
+} from "./handlers/propertySearchHandlers";
+import { 
+  handlePropertyAnalysis,
+  formatNewPropertyResponse 
+} from "./handlers/propertyAnalysisHandlers";
+import {
+  getDefaultResponse,
+  extractLocationData,
+  extractPriceAndRent
+} from "./handlers/messageParsingUtils";
 
 export const processMessage = async (
   message: string,
