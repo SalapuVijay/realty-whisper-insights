@@ -1,0 +1,105 @@
+node : node:internal/
+modules/cjs/loader:13
+86
+At line:1 char:1
++ node server.js > 
+error.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (node:in   
+ ternal/modules/c    
+js/loader:1386:S    
+tring) [], Remot    
+eException
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  throw err;
+  ^
+
+Error: Cannot find 
+module 'express-async
+-handler'
+Require stack:
+- C:\Users\balup\OneD
+rive\Documents\Deskto
+p\realty-whisper-insights\se
+rver\controllers\auth
+Controller.js
+- C:\Users\balup\OneD
+rive\Documents\Deskto
+p\realty-whisper-insights\se
+rver\routes\authRoute
+s.js
+- C:\Users\balup\OneD
+rive\Documents\Deskto
+p\realty-whisper-insights\se
+rver\server.js
+    at Function._reso
+lveFilename (node:int
+ernal/modules/cjs/loa
+der:1383:15)
+    at 
+defaultResolveImpl (n
+ode:internal/modules/
+cjs/loader:1025:19)
+    at resolveForCJSW
+ithHooks (node:intern
+al/modules/cjs/loader
+:1030:22)
+    at 
+Function._load (node:
+internal/modules/cjs/
+loader:1192:37)
+    at TracingChannel
+.traceSync (node:diag
+nostics_channel:322:1
+4)
+    at 
+wrapModuleLoad (node:
+internal/modules/cjs/
+loader:237:24)
+    at 
+Module.require (node:
+internal/modules/cjs/
+loader:1463:12)
+    at require (node:
+internal/modules/help
+ers:147:16)
+    at 
+Object.<anonymous> (C
+:\Users\balup\OneDriv
+e\Documents\Desktop\l
+andchat-connect\serve
+r\controllers\authCon
+troller.js:1:22)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1706:14) {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\balup
+\\OneDrive\\Documents
+\\Desktop\\landchat-c
+onnect\\server\\contr
+ollers\\authControlle
+r.js',
+    'C:\\Users\\balup
+\\OneDrive\\Documents
+\\Desktop\\landchat-c
+onnect\\server\\route
+s\\authRoutes.js',
+    'C:\\Users\\balup
+\\OneDrive\\Documents
+\\Desktop\\landchat-c
+onnect\\server\\serve
+r.js'
+  ]
+}
+
+Node.js v22.20.0
